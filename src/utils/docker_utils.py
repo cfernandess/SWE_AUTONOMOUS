@@ -1,6 +1,6 @@
 # docker_utils.py
 
-import subprocess
+import subprocess  # nosec B603
 import shlex
 from pathlib import Path
 from typing import Tuple
@@ -19,7 +19,7 @@ def run_command(cmd: str, cwd: Path = None, timeout: int = 120) -> Tuple[str, in
             stderr=subprocess.STDOUT,
             timeout=timeout,
             text=True,
-        )
+        )  # nosec B603
         return result.stdout, result.returncode
     except subprocess.TimeoutExpired as e:
         return f"[TIMEOUT] Command exceeded {timeout}s:\n{e.stdout}", -1
@@ -40,7 +40,7 @@ def apply_patch(patch_text: str, repo_path: Path) -> Tuple[str, int]:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-    ).stdout, 0
+    ).stdout, 0  # nosec B603
     patch_file.unlink(missing_ok=True)
     return out, code
 

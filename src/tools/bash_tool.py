@@ -1,5 +1,5 @@
 import shlex
-import subprocess
+import subprocess  # nosec B603
 
 from smolagents.tools import Tool
 

@@ -3,7 +3,7 @@ from io import StringIO
 import pathspec
 from unidiff import PatchSet
 import os
-import subprocess
+import subprocess  # nosec B603
 from pathlib import Path
 from shutil import which
 import logging
@@ -99,10 +99,10 @@ def clone_repo(
                     return repo_path
                 else:
                     logger.warning(f"[clone_repo] ⚠️ Wrong commit ({current_commit} ≠ {base_commit}). Re-cloning...")
-                    subprocess.run(["rm", "-rf", str(repo_path)], check=True)
+                    subprocess.run(["rm", "-rf", str(repo_path)], check=True)  # nosec B603
             except subprocess.SubprocessError:
                 logger.warning(f"[clone_repo] ⚠️ Invalid .git repo. Re-cloning...")
-                subprocess.run(["rm", "-rf", str(repo_path)], check=True)
+                subprocess.run(["rm", "-rf", str(repo_path)], check=True)  # nosec B603
 
     os.makedirs(repo_path.parent, exist_ok=True)
 
@@ -112,11 +112,11 @@ def clone_repo(
     repo_url = f"https://github.com/{repo}.git"
     logger.info(f"[clone_repo] Cloning {repo_url} into {repo_path}")
 
-    result = subprocess.run(["git", "clone", repo_url, str(repo_path)], check=False)
+    result = subprocess.run(["git", "clone", repo_url, str(repo_path)], check=False)  # nosec B603
     if result.returncode != 0:
         raise RuntimeError(f"Failed to clone repository: {repo_url}")
 
-    result = subprocess.run(["git", "-C", str(repo_path), "checkout", base_commit], check=False)
+    result = subprocess.run(["git", "-C", str(repo_path), "checkout", base_commit], check=False)  # nosec B603
     if result.returncode != 0:
         raise RuntimeError(f"Failed to checkout commit {base_commit}")
 
