@@ -34,7 +34,7 @@ def main():
     )
     args = parser.parse_args()
     if args.local:
-        root_output = Path.home() / "swe_bot_output"
+        root_output = Path("/Users/coby/TEMP")
         root_path = project_root()
         load_dotenv(dotenv_path=os.path.join(root_path, ".env"))
     else:
