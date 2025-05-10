@@ -33,21 +33,18 @@ def main():
         help="Run outside Docker (writes to ~/swe_bot_output)",
     )
     args = parser.parse_args()
-
-    root_path = project_root()
-
     if args.local:
         root_output = Path.home() / "swe_bot_output"
+        root_path = project_root()
+        load_dotenv(dotenv_path=os.path.join(root_path, ".env"))
     else:
         root_output = Path("/app/output")
+        root_path = Path("/app")
 
     root_output.mkdir(parents=True, exist_ok=True)
-    load_dotenv(dotenv_path=os.path.join(root_path, ".env"))
-
     problem: Problem = load_swe_bench(
         path="princeton-nlp/SWE-bench_Verified", instance_id=args.instance_id
     )
-
     if problem is None:
         raise ValueError(f"Instance ID {args.instance_id} not found.")
 
@@ -73,7 +70,7 @@ def main():
     environment.logger.info(f"[Agent] ✅ Output saved to {output_path}")
 
 
-# astropy__astropy-12907
+# docker run swe-agent --instance_id=astropy__astropy-12907
 if __name__ == "__main__":
     try:
         main()

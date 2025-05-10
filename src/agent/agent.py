@@ -6,8 +6,8 @@ from typing import Dict, Any
 from smolagents import ToolCallingAgent
 from smolagents.models import LiteLLMModel, HfApiModel
 
-from src.config.config_agent import ConfigAgent
 from src.agent.prompt_template import PromptTemplate
+from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.models.preprocess_problem import PreprocessProblem
 from src.models.prompt_arg import PromptArg

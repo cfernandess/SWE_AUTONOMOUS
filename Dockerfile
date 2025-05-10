@@ -18,4 +18,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Default command (overridden by ENTRYPOINT script)
+# Set the source folder in PYTHONPATH
+ENV PYTHONPATH=/app
+
 CMD ["python", "src/main.py"]

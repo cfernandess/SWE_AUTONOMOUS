@@ -1,7 +1,7 @@
 # docker_utils.py
 
-import subprocess  # nosec B603
 import shlex
+import subprocess  # nosec B603
 from pathlib import Path
 from typing import Tuple
 

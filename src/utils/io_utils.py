@@ -1,13 +1,14 @@
 # io_utils.py
-from io import StringIO
-import pathspec
-from unidiff import PatchSet
+import logging
 import os
 import subprocess  # nosec B603
+from io import StringIO
 from pathlib import Path
 from shutil import which
-import logging
 from typing import Optional
+
+import pathspec
+from unidiff import PatchSet
 
 
 def apply_patch_to_file(original_content: str, unified_diff: str, filename: str) -> str:

@@ -7,13 +7,16 @@ OUTPUT_DIR ?= $(PWD)/output
 build:
 	docker build -t $(IMAGE_NAME) .
 
+ENV_FILE ?= .env.docker
+
 # Run the agent for a given instance
 run: build
 	mkdir -p $(OUTPUT_DIR)
 	docker run --rm \
+		--env-file $(ENV_FILE) \
 		-v $(OUTPUT_DIR):/app/output \
-		$(IMAGE_NAME) \
-		--instance_id=$(INSTANCE)
+		$(IMAGE_NAME) python src/main.py --instance_id=$(INSTANCE)
+
 
 # Clean local output
 clean:
