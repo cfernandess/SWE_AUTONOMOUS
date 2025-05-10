@@ -4,7 +4,6 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 
 
-
 class JsonlObject(BaseModel):
     """
     Base class for objects serialized to and from JSONL format.
@@ -50,6 +49,5 @@ class JsonlObject(BaseModel):
         return json.dumps(
             [json.loads(obj.to_json()) for obj in objects], separators=(",", ":")
         )
-
 
 # EOF

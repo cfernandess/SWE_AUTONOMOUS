@@ -27,5 +27,4 @@ class YamlObject(BaseModel):
             data = yaml.safe_load(f)
         return cls.model_validate(data)
 
-
     # EOF

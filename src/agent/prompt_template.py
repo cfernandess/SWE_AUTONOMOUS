@@ -6,7 +6,7 @@ from typing import List
 
 import tiktoken
 
-from src.config_agent import ConfigAgent
+from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.models.preprocess_problem import PreprocessProblem
 from src.models.prompt_arg import PromptArg

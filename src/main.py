@@ -1,17 +1,21 @@
+# main.py
+
 import argparse
 import json
 import logging
 import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 from rich.logging import RichHandler
 
-from src.agent import AutonomousAgent
-from src.config_agent import ConfigAgent
+from src.agent.agent import AutonomousAgent
+from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.models.preprocess_problem import PreprocessProblem
 from src.models.problem import Problem
 from src.utils.io_utils import project_root
-from src.utils.swe_bench_util import load_swe_bench_verified_by_id
+from src.utils.swe_bench_util import load_swe_bench
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,14 +28,24 @@ logging.basicConfig(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--instance_id", type=str, required=True, help="SWE-bench Verified instance ID")
+    parser.add_argument("--local", action="store_true", help="Run outside Docker (writes to ~/swe_bot_output)")
     args = parser.parse_args()
 
     root_path = project_root()
-    root_output = "/Users/coby/TEMP/"
+
+    if args.local:
+        root_output = Path.home() / "swe_bot_output"
+    else:
+        root_output = Path("/app/output")
+
+    root_output.mkdir(parents=True, exist_ok=True)
     load_dotenv(dotenv_path=os.path.join(root_path, ".env"))
 
-    # You can filter by instance_id locally or load just one entry
-    problem: Problem = load_swe_bench_verified_by_id(instance_id=args.instance_id)
+    problem: Problem = load_swe_bench(
+        path="princeton-nlp/SWE-bench_Verified",
+        instance_id=args.instance_id
+    )
+
     if problem is None:
         raise ValueError(f"Instance ID {args.instance_id} not found.")
 
@@ -49,13 +63,20 @@ def main():
     )
 
     response = agent.run()
-    output_path = f"/app/output/{args.instance_id}.json"
+
+    output_path = root_output / f"{args.instance_id}.json"
     with open(output_path, "w") as f:
         json.dump(response, f, indent=2)
 
-    print(f"[Agent] Output saved to {output_path}")
+    environment.logger.info(f"[Agent] ✅ Output saved to {output_path}")
 
 
+# astropy__astropy-12907
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        logging.getLogger("rich").exception(f"[Agent] ❌ Unhandled error: {e}")
+        raise
 
+# EOF

@@ -1,12 +1,13 @@
 # io_utils.py
-import os
-import subprocess
 from io import StringIO
-from pathlib import Path
-from shutil import which
-
 import pathspec
 from unidiff import PatchSet
+import os
+import subprocess
+from pathlib import Path
+from shutil import which
+import logging
+from typing import Optional
 
 
 def apply_patch_to_file(original_content: str, unified_diff: str, filename: str) -> str:
@@ -62,54 +63,65 @@ def project_root(marker=".git") -> str:
 
 
 def clone_repo(
-    instance_id: str, repo: str, base_commit: str, target_folder: Path
+        instance_id: str,
+        repo: str,
+        base_commit: str,
+        target_folder: Path,
+        logger: Optional[logging.Logger] = None,
 ) -> Path:
     """
-    Clones the repository from the given URL at a specific commit.
+    Clones the repository from GitHub and checks out a specific commit.
 
     Args:
-        instance_id (str): Unique instance identifier for folder naming.
-        repo (str): The repository owner/name identifier from GitHub.
-        base_commit (str): The commit hash to check out.
-        target_folder (Path): The directory where the repository will be cloned.
+        instance_id (str): Unique ID for the problem instance.
+        repo (str): GitHub repo name (e.g., "astropy/astropy").
+        base_commit (str): Git commit to checkout.
+        target_folder (Path): Where the repo should be cloned.
+        logger (Optional[Logger]): Logger instance for output.
 
     Returns:
-        str: Path to the cloned repository.
+        Path: Path to the checked-out repo.
     """
-    repo_path = os.path.join(target_folder, instance_id)
-    # TODO: add a check repo_path is the actual GIT repository on the specific input: base_commit
-    if os.path.exists(repo_path):
-        print(f"Repository already exists at {repo_path}. Using the existing repo.")
-        return Path(repo_path)
+    logger = logger or logging.getLogger("rich")
+    repo_path = target_folder / instance_id
 
-    os.makedirs(repo_path, exist_ok=True)
+    # ✅ If already cloned and on correct commit
+    if repo_path.exists():
+        git_dir = repo_path / ".git"
+        if git_dir.exists():
+            try:
+                current_commit = subprocess.check_output(
+                    ["git", "-C", str(repo_path), "rev-parse", "HEAD"],
+                    text=True,
+                ).strip()
+                if current_commit == base_commit:
+                    logger.info(f"[clone_repo] ✅ Repo already at {base_commit}.")
+                    return repo_path
+                else:
+                    logger.warning(f"[clone_repo] ⚠️ Wrong commit ({current_commit} ≠ {base_commit}). Re-cloning...")
+                    subprocess.run(["rm", "-rf", str(repo_path)], check=True)
+            except subprocess.SubprocessError:
+                logger.warning(f"[clone_repo] ⚠️ Invalid .git repo. Re-cloning...")
+                subprocess.run(["rm", "-rf", str(repo_path)], check=True)
+
+    os.makedirs(repo_path.parent, exist_ok=True)
 
     if not which("git"):
         raise EnvironmentError("Git is not installed or not found in PATH.")
 
-    # Treat 'repo' as a GitHub repo identifier directly
     repo_url = f"https://github.com/{repo}.git"
+    logger.info(f"[clone_repo] Cloning {repo_url} into {repo_path}")
 
-    # Clone the repository using os.spawnvp
-    result = os.spawnvp(os.P_WAIT, "git", ["git", "clone", repo_url, repo_path])
+    result = subprocess.run(["git", "clone", repo_url, str(repo_path)], check=False)
+    if result.returncode != 0:
+        raise RuntimeError(f"Failed to clone repository: {repo_url}")
 
-    if result != 0:
-        raise RuntimeError(
-            f"Failed to clone repository: {repo_url} with status {result}."
-        )
+    result = subprocess.run(["git", "-C", str(repo_path), "checkout", base_commit], check=False)
+    if result.returncode != 0:
+        raise RuntimeError(f"Failed to checkout commit {base_commit}")
 
-    # Checkout the specific commit
-    result = os.spawnvp(
-        os.P_WAIT, "git", ["git", "-C", repo_path, "checkout", base_commit]
-    )
-
-    if result != 0:
-        raise RuntimeError(
-            f"Failed to checkout commit {base_commit} with status {result}."
-        )
-
-    print(f"Repository cloned and checked out at commit {base_commit}.")
-    return Path(repo_path)
+    logger.info(f"[clone_repo] ✅ Repo ready at commit {base_commit}")
+    return repo_path
 
 
 def load_file_content(file_path: Path) -> str:
@@ -185,6 +197,5 @@ def annotate_python_files():
             new_lines.append("# EOF")
 
         file_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
-
 
 # EOF

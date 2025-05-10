@@ -25,7 +25,7 @@ class ConfigAgent(YamlObject):
     )
     save_cache: bool = Field(True, description="Save results to cache after computing.")
     agent_max_steps: conint(gt=1, le=5) = Field(
-        10,
+        1,
         description="Number of agent max retries. Must be >0.",
     )
     mock_mode: Optional[bool] = Field(
@@ -33,7 +33,7 @@ class ConfigAgent(YamlObject):
         description="If True, disables actual LLM calls and returns mocked responses (for testing).",
     )
     prompt_path: Path = Field(
-        Path("src/autonomous_agent/agent.prompt"),
+        Path("src/agent/agent.prompt"),
         description="Relative path to the main action prompt file.",
     )
 

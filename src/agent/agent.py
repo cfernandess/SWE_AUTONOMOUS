@@ -1,12 +1,13 @@
-import logging
+# Agent.py
+
 import os
 from typing import Dict, Any
 
 from smolagents import ToolCallingAgent
 from smolagents.models import LiteLLMModel, HfApiModel
 
-from src.config_agent import ConfigAgent
-from src.prompt_template import PromptTemplate
+from src.config.config_agent import ConfigAgent
+from src.agent.prompt_template import PromptTemplate
 from src.models.environment import Environment
 from src.models.preprocess_problem import PreprocessProblem
 from src.models.prompt_arg import PromptArg
@@ -16,10 +17,10 @@ from src.tools.edit_tool import EditorTool
 
 class AutonomousAgent:
     def __init__(
-        self,
-        preprocess_problem: PreprocessProblem,
-        environment: Environment,
-        config_agent: ConfigAgent,
+            self,
+            preprocess_problem: PreprocessProblem,
+            environment: Environment,
+            config_agent: ConfigAgent,
     ):
         """
         Initialize the SWE agent
@@ -32,7 +33,7 @@ class AutonomousAgent:
         self.preprocess_problem = preprocess_problem
         self.environment = environment
         self.config_agent = config_agent
-        self.logger = logging.getLogger("rich")
+        self.logger = environment.logger
         # Initialize tools
         self.tools = [BashTool(), EditorTool()]
         args = [
@@ -96,3 +97,5 @@ class AutonomousAgent:
         response = self.agent.run(prompt)
 
         return response
+
+#  EOF

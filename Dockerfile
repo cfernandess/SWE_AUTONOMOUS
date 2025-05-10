@@ -18,4 +18,4 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Default command (overridden by ENTRYPOINT script)
-CMD ["python", "src/autonomous_agent/run_agent.py"]
+CMD ["python", "src/main.py"]

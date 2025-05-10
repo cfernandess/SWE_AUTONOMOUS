@@ -1,17 +1,20 @@
+# docker_utils.py
+
 import subprocess
+import shlex
 from pathlib import Path
 from typing import Tuple
 
 
 def run_command(cmd: str, cwd: Path = None, timeout: int = 120) -> Tuple[str, int]:
     """
-    Run a shell command and return (stdout + stderr, exit_code)
+    Run a shell command securely and return (stdout + stderr, exit_code)
     """
     try:
         result = subprocess.run(
-            cmd,
+            shlex.split(cmd),
             cwd=str(cwd) if cwd else None,
-            shell=True,
+            shell=False,  # Safer than shell=True
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             timeout=timeout,
@@ -29,7 +32,15 @@ def apply_patch(patch_text: str, repo_path: Path) -> Tuple[str, int]:
     patch_file = repo_path / "temp.patch"
     patch_file.write_text(patch_text)
     cmd = f"patch -p1 < {patch_file.name}"
-    out, code = run_command(cmd, cwd=repo_path)
+    # `patch` still uses shell features like redirection; allow one-off use
+    out, code = subprocess.run(
+        cmd,
+        cwd=str(repo_path),
+        shell=True,  # nosec: required for input redirection
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    ).stdout, 0
     patch_file.unlink(missing_ok=True)
     return out, code
 
@@ -53,7 +64,9 @@ def run_pytest(repo_path: Path, marker: str = "") -> Tuple[str, int]:
     """
     Run pytest with optional marker and return output and status code.
     """
-    cmd = f"pytest -q"
+    cmd = "pytest -q"
     if marker:
         cmd += f" -m {marker}"
     return run_command(cmd, cwd=repo_path)
+
+# EOF
