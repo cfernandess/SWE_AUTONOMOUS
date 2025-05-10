@@ -17,10 +17,10 @@ from src.tools.edit_tool import EditorTool
 
 class AutonomousAgent:
     def __init__(
-            self,
-            preprocess_problem: PreprocessProblem,
-            environment: Environment,
-            config_agent: ConfigAgent,
+        self,
+        preprocess_problem: PreprocessProblem,
+        environment: Environment,
+        config_agent: ConfigAgent,
     ):
         """
         Initialize the SWE agent
@@ -97,5 +97,6 @@ class AutonomousAgent:
         response = self.agent.run(prompt)
 
         return response
+
 
 #  EOF

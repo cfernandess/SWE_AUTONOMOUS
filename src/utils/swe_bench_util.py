@@ -5,11 +5,9 @@ from src.models.problem import Problem
 
 
 def load_swe_bench(path: str, instance_id: str, split: str = "test") -> Problem:
-    dataset = load_dataset(
-        path=path,
-        split=split,
-        streaming=False
-    ).filter(lambda x: x["instance_id"] == instance_id)
+    dataset = load_dataset(path=path, split=split, streaming=False).filter(
+        lambda x: x["instance_id"] == instance_id
+    )
     samples = list(dataset)
     if not samples:
         raise ValueError(f"Instance ID {instance_id} not found.")
@@ -28,5 +26,6 @@ def load_swe_bench(path: str, instance_id: str, split: str = "test") -> Problem:
         FAIL_TO_PASS=sample.get("FAIL_TO_PASS", "N/A"),
         PASS_TO_PASS=sample.get("PASS_TO_PASS", "N/A"),
     )
+
 
 # EOF

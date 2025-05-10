@@ -63,11 +63,11 @@ def project_root(marker=".git") -> str:
 
 
 def clone_repo(
-        instance_id: str,
-        repo: str,
-        base_commit: str,
-        target_folder: Path,
-        logger: Optional[logging.Logger] = None,
+    instance_id: str,
+    repo: str,
+    base_commit: str,
+    target_folder: Path,
+    logger: Optional[logging.Logger] = None,
 ) -> Path:
     """
     Clones the repository from GitHub and checks out a specific commit.
@@ -98,10 +98,14 @@ def clone_repo(
                     logger.info(f"[clone_repo] ✅ Repo already at {base_commit}.")
                     return repo_path
                 else:
-                    logger.warning(f"[clone_repo] ⚠️ Wrong commit ({current_commit} ≠ {base_commit}). Re-cloning...")
-                    subprocess.run(["rm", "-rf", str(repo_path)], check=True)  # nosec B603
+                    logger.warning(
+                        f"[clone_repo] ⚠️ Wrong commit ({current_commit} ≠ {base_commit}). Re-cloning..."
+                    )
+                    subprocess.run(
+                        ["rm", "-rf", str(repo_path)], check=True
+                    )  # nosec B603
             except subprocess.SubprocessError:
-                logger.warning(f"[clone_repo] ⚠️ Invalid .git repo. Re-cloning...")
+                logger.warning("[clone_repo] ⚠️ Invalid .git repo. Re-cloning...")
                 subprocess.run(["rm", "-rf", str(repo_path)], check=True)  # nosec B603
 
     os.makedirs(repo_path.parent, exist_ok=True)
@@ -112,11 +116,15 @@ def clone_repo(
     repo_url = f"https://github.com/{repo}.git"
     logger.info(f"[clone_repo] Cloning {repo_url} into {repo_path}")
 
-    result = subprocess.run(["git", "clone", repo_url, str(repo_path)], check=False)  # nosec B603
+    result = subprocess.run(
+        ["git", "clone", repo_url, str(repo_path)], check=False
+    )  # nosec B603
     if result.returncode != 0:
         raise RuntimeError(f"Failed to clone repository: {repo_url}")
 
-    result = subprocess.run(["git", "-C", str(repo_path), "checkout", base_commit], check=False)  # nosec B603
+    result = subprocess.run(
+        ["git", "-C", str(repo_path), "checkout", base_commit], check=False
+    )  # nosec B603
     if result.returncode != 0:
         raise RuntimeError(f"Failed to checkout commit {base_commit}")
 
@@ -197,5 +205,6 @@ def annotate_python_files():
             new_lines.append("# EOF")
 
         file_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+
 
 # EOF

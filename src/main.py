@@ -18,17 +18,20 @@ from src.utils.io_utils import project_root
 from src.utils.swe_bench_util import load_swe_bench
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    datefmt="[%X]",
-    handlers=[RichHandler()]
+    level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
 )
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--instance_id", type=str, required=True, help="SWE-bench Verified instance ID")
-    parser.add_argument("--local", action="store_true", help="Run outside Docker (writes to ~/swe_bot_output)")
+    parser.add_argument(
+        "--instance_id", type=str, required=True, help="SWE-bench Verified instance ID"
+    )
+    parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Run outside Docker (writes to ~/swe_bot_output)",
+    )
     args = parser.parse_args()
 
     root_path = project_root()
@@ -42,8 +45,7 @@ def main():
     load_dotenv(dotenv_path=os.path.join(root_path, ".env"))
 
     problem: Problem = load_swe_bench(
-        path="princeton-nlp/SWE-bench_Verified",
-        instance_id=args.instance_id
+        path="princeton-nlp/SWE-bench_Verified", instance_id=args.instance_id
     )
 
     if problem is None:

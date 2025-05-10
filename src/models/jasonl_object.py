@@ -50,4 +50,5 @@ class JsonlObject(BaseModel):
             [json.loads(obj.to_json()) for obj in objects], separators=(",", ":")
         )
 
+
 # EOF

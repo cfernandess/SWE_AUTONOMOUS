@@ -9,12 +9,26 @@ from src.utils.io_utils import clone_repo
 
 
 class Environment(YamlObject):
-    instance_id: str = Field(..., description="Unique identifier for this workflow instance.")
-    root_path: Path = Field(..., description="Path to the root directory of the robot_swe project.")
-    root_output: Path = Field(..., description="Path to the root directory where all instance outputs are stored.")
-    repo_path: Optional[Path] = Field(None, description="Path to the cloned target repository.")
-    output_path: Optional[Path] = Field(None, description="Path to the output directory for the current workflow instance.")
-    problem: Optional[Problem] = Field(None, description="Problem object that describes the issue to be solved.")
+    instance_id: str = Field(
+        ..., description="Unique identifier for this workflow instance."
+    )
+    root_path: Path = Field(
+        ..., description="Path to the root directory of the robot_swe project."
+    )
+    root_output: Path = Field(
+        ...,
+        description="Path to the root directory where all instance outputs are stored.",
+    )
+    repo_path: Optional[Path] = Field(
+        None, description="Path to the cloned target repository."
+    )
+    output_path: Optional[Path] = Field(
+        None,
+        description="Path to the output directory for the current workflow instance.",
+    )
+    problem: Optional[Problem] = Field(
+        None, description="Problem object that describes the issue to be solved."
+    )
 
     @property
     def logger(self) -> logging.Logger:

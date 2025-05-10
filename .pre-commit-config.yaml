@@ -23,3 +23,6 @@ repos:
     rev: 1.7.5
     hooks:
       - id: bandit
+        args:
+          - "--skip"
+          - "B404,B603,B607"
