@@ -22,14 +22,19 @@ class BashTool(Tool):
     output_type = "string"
 
     def forward(self, command: str) -> str:
+        stdout = ""
+        stderr = ""
+        error = ""
         try:
-            # Safely split the command into list form
             command_list = shlex.split(command)
             result = subprocess.run(
                 command_list, capture_output=True, text=True, timeout=30
             )  # nosec B603
-            return f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+            stdout = result.stdout
+            stderr = result.stderr
         except subprocess.TimeoutExpired:
-            return "Command timed out after 30 seconds"
+            error = "Command timed out after 30 seconds"
         except Exception as e:
-            return f"Error executing command: {str(e)}"
+            error = str(e)
+
+        return f"STDOUT:\n{stdout}\nSTDERR:\n{stderr}\nERROR:\n{error}"
