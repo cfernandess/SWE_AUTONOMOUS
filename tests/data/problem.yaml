@@ -1,0 +1,34 @@
+base_commit: 14e1a23a3166b9a645a16de96f694c77a5d4abb7
+created_at: '2021-10-13T11:35:29Z'
+environment_setup_commit: 67023b85c41d23d6c6d69812a41b207c4f8a9331
+fail_to_pass: []
+hints_text: Actually, re-reading the docs I think this is the intended behaviour...
+  closing
+instance_id: sqlfluff__sqlfluff-1625
+pass_to_pass: []
+patch: "diff --git a/src/sqlfluff/rules/L031.py b/src/sqlfluff/rules/L031.py\n---\
+  \ a/src/sqlfluff/rules/L031.py\n+++ b/src/sqlfluff/rules/L031.py\n@@ -211,7 +211,7\
+  \ @@ def _lint_aliases_in_join(\n             violation_buff.append(\n         \
+  \        LintResult(\n                     anchor=alias_info.alias_identifier_ref,\n\
+  -                    description=\"Avoid using aliases in join condition\",\n+ \
+  \                   description=\"Avoid aliases in from clauses and join conditions.\"\
+  ,\n                     fixes=fixes,\n                 )\n             )\n"
+problem_statement: "TSQL - L031 incorrectly triggers \"Avoid using aliases in join\
+  \ condition\" when no join present\n## Expected Behaviour\r\n\r\nBoth of these queries\
+  \ should pass, the only difference is the addition of a table alias 'a':\r\n\r\n\
+  1/ no alias\r\n\r\n```\r\nSELECT [hello]\r\nFROM\r\n    mytable\r\n```\r\n\r\n2/\
+  \ same query with alias\r\n\r\n```\r\nSELECT a.[hello]\r\nFROM\r\n    mytable AS\
+  \ a\r\n```\r\n\r\n## Observed Behaviour\r\n\r\n1/ passes\r\n2/ fails with: L031:\
+  \ Avoid using aliases in join condition.\r\n\r\nBut there is no join condition :-)\r\
+  \n\r\n## Steps to Reproduce\r\n\r\nLint queries above\r\n\r\n## Dialect\r\n\r\n\
+  TSQL\r\n\r\n## Version\r\n\r\nsqlfluff 0.6.9\r\nPython 3.6.9\r\n\r\n## Configuration\r\
+  \n\r\nN/A\n"
+repo: sqlfluff/sqlfluff
+test_patch: "diff --git a/test/cli/commands_test.py b/test/cli/commands_test.py\n\
+  --- a/test/cli/commands_test.py\n+++ b/test/cli/commands_test.py\n@@ -49,7 +49,7\
+  \ @@ def invoke_assert_code(\n expected_output = \"\"\"== [test/fixtures/linter/indentation_error_simple.sql]\
+  \ FAIL\n L:   2 | P:   4 | L003 | Indentation not hanging or a multiple of 4 spaces\n\
+  \ L:   5 | P:  10 | L010 | Keywords must be consistently upper case.\n-L:   5 |\
+  \ P:  13 | L031 | Avoid using aliases in join condition\n+L:   5 | P:  13 | L031\
+  \ | Avoid aliases in from clauses and join conditions.\n \"\"\"\n \n \n"
+version: '0.6'

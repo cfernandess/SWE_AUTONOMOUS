@@ -1,5 +1,3 @@
-# Agent.py
-
 import os
 from typing import Dict, Any
 
@@ -13,6 +11,7 @@ from src.models.preprocess_problem import PreprocessProblem
 from src.models.prompt_arg import PromptArg
 from src.tools.bash_tool import BashTool
 from src.tools.edit_tool import EditorTool
+from src.tools.sequential_thinking_tool import SequentialThinkingTool
 
 
 class AutonomousAgent:
@@ -35,7 +34,15 @@ class AutonomousAgent:
         self.config_agent = config_agent
         self.logger = environment.logger
         # Initialize tools
-        self.tools = [BashTool(), EditorTool()]
+        self.tools = [
+            BashTool(),
+            EditorTool(),
+            SequentialThinkingTool(
+                preprocess_problem=preprocess_problem,
+                environment=environment,
+                config_agent=config_agent,
+            ),
+        ]
         args = [
             PromptArg(
                 name="problem_statement",
@@ -43,11 +50,18 @@ class AutonomousAgent:
             ),
             PromptArg(name="repo_path", data=str(environment.repo_path)),
         ]
-        self.prompt_template = PromptTemplate(
+        self.prompt_patch_template = PromptTemplate(
             preprocess_problem=preprocess_problem,
             environment=environment,
             config_agent=config_agent,
-            path=environment.root_path / config_agent.prompt_path,
+            path=environment.root_path / config_agent.patch_prompt_path,
+            prompt_args=args,
+        )
+        self.prompt_test_patch_template = PromptTemplate(
+            preprocess_problem=preprocess_problem,
+            environment=environment,
+            config_agent=config_agent,
+            path=environment.root_path / config_agent.test_patch_prompt_path,
             prompt_args=args,
         )
 
@@ -55,28 +69,7 @@ class AutonomousAgent:
             self.agent = None
             return
 
-        if config_agent.config_model.vendor_name.startswith("ollama"):
-            self.model_wrapper = LiteLLMModel(
-                model_id=config_agent.config_model.lite_llm_name,
-                api_base="http://localhost:11434",
-                api_key="ollama",
-                num_ctx=8192,
-            )
-        elif config_agent.config_model.vendor_name.startswith("openai"):
-            self.model_wrapper = LiteLLMModel(
-                model_id=config_agent.config_model.lite_llm_name,
-                api_base="https://api.openai.com/v1",
-                tool_choice="auto",
-                api_key=os.getenv("OPENAI_API_KEY", ""),
-            )
-        elif config_agent.config_model.vendor_name.startswith("anthropic"):
-            self.model_wrapper = LiteLLMModel(
-                model_id=config_agent.config_model.lite_llm_name,
-                api_key=os.getenv("ANTHROPIC_API_KEY", ""),
-                custom_llm_provider="anthropic",
-            )
-        else:
-            self.model_wrapper = HfApiModel(model="")
+        self.model_wrapper = self.get_llm_wrapper(config_agent.config_model)
 
         self.agent = ToolCallingAgent(
             tools=self.tools,
@@ -84,19 +77,58 @@ class AutonomousAgent:
             max_steps=config_agent.agent_max_steps,
         )
 
-    def run(self) -> Dict[str, Any]:
+    def generate_patch(self) -> str:
+        """
+        Generates a patch for the current problem.
+        Can be called multiple times to sample variations.
+        """
+        prompt = self.prompt_patch_template
+        return self.agent.run(prompt.generate())
+
+    def generate_patch_test(self) -> str:
+        """
+        Generates a patch test that ideally reproduces the failure.
+        Can be reused to validate one or more patches.
+        """
+        prompt = self.prompt_test_patch_template
+        return self.agent.run(prompt.generate())
+
+    def run(self, prompt: str) -> Dict[str, Any]:
         """
         Run the SWE agent on a specific repository with a PR description
 
         Returns:
             The agent's response
         """
-        # Format the prompt for the agent
-        prompt = self.prompt_template.generate()
         # Run the agent with the formatted prompt
         response = self.agent.run(prompt)
 
         return response
+
+    @staticmethod
+    def get_llm_wrapper(config_model):
+        if config_model.vendor_name.startswith("ollama"):
+            return LiteLLMModel(
+                model_id=config_model.lite_llm_name,
+                api_base="http://localhost:11434",
+                api_key="ollama",
+                num_ctx=config_model.max_tokens,
+            )
+        elif config_model.vendor_name.startswith("openai"):
+            return LiteLLMModel(
+                model_id=config_model.lite_llm_name,
+                api_base="https://api.openai.com/v1",
+                tool_choice="auto",
+                api_key=os.getenv("OPENAI_API_KEY", ""),
+            )
+        elif config_model.vendor_name.startswith("anthropic"):
+            return LiteLLMModel(
+                model_id=config_model.lite_llm_name,
+                api_key=os.getenv("ANTHROPIC_API_KEY", ""),
+                custom_llm_provider="anthropic",
+            )
+        else:
+            return HfApiModel(model=config_model.model_name)
 
 
 #  EOF

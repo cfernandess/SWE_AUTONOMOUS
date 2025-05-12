@@ -1,5 +1,10 @@
 # main.py
 
+# TODO: 1. Paper
+# TODO: 2. RL EcoSystem
+# TODO: 3. Budget
+# TODO: 4.
+
 import argparse
 import json
 import logging
