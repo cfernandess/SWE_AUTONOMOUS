@@ -66,7 +66,7 @@ def main():
         config_agent=ConfigAgent(),
     )
 
-    response = agent.run()
+    response = agent.generate_patch()
 
     output_path = root_output / f"{args.instance_id}.json"
     with open(output_path, "w") as f:
