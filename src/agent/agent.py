@@ -18,10 +18,10 @@ class LLMResponseError(Exception):
 
 class AutonomousAgent:
     def __init__(
-            self,
-            problem: Problem,
-            environment: Environment,
-            config_agent: ConfigAgent,
+        self,
+        problem: Problem,
+        environment: Environment,
+        config_agent: ConfigAgent,
     ):
         """
         Initialize the SWE agent
@@ -71,7 +71,9 @@ class AutonomousAgent:
             self.agent = None
             return
 
-        self.model_wrapper = self.config_agent.get_llm_wrapper(config_agent.config_model)
+        self.model_wrapper = self.config_agent.get_llm_wrapper(
+            config_agent.config_model
+        )
 
         self.agent = ToolCallingAgent(
             tools=self.tools,
@@ -113,5 +115,6 @@ class AutonomousAgent:
             return response["description"].strip()
 
         return str(response).strip()
+
 
 #  EOF

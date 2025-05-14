@@ -10,10 +10,10 @@ from src.models.problem import Problem
 
 class PatchSelectionAgent:
     def __init__(
-            self,
-            problem: Problem,
-            environment: Environment,
-            config_agent: ConfigAgent,
+        self,
+        problem: Problem,
+        environment: Environment,
+        config_agent: ConfigAgent,
     ):
         self.agent = AutonomousAgent(
             problem=problem,
@@ -55,5 +55,6 @@ Return your answer in the following JSON format (on a single line):
                 "selected_patch_idx": 0,
                 "reason": "Failed to parse response. Defaulting to first patch.",
             }
+
 
 # EOF

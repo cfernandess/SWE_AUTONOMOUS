@@ -5,7 +5,6 @@ import pytest
 from src.agent.prompt_template import PromptTemplate
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
-from src.models.preprocess_problem import PreprocessProblem
 from src.models.problem import Problem
 from src.models.prompt_arg import PromptArg
 

@@ -81,4 +81,6 @@ class ConfigAgent(YamlObject):
             )
         else:
             return HfApiModel(model=config_model.model_name, **common_kwargs)
+
+
 # EOF

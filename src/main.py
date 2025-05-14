@@ -39,9 +39,7 @@ def main():
     )
     config_agent = ConfigAgent()
     pipeline = ProblemPipeline(
-        problem=problem,
-        environment=environment,
-        config_agent=config_agent
+        problem=problem, environment=environment, config_agent=config_agent
     )
     pipeline.run()
 

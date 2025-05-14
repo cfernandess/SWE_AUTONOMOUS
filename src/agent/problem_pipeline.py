@@ -22,10 +22,10 @@ logging.basicConfig(
 
 class ProblemPipeline:
     def __init__(
-            self,
-            problem: Problem,
-            environment: Environment,
-            config_agent: ConfigAgent,
+        self,
+        problem: Problem,
+        environment: Environment,
+        config_agent: ConfigAgent,
     ):
         """
         Problem Pipeline
@@ -55,11 +55,13 @@ class ProblemPipeline:
         return data
 
     def summarize_eval_results(self, results: List[Dict]) -> Tuple[List[int], str]:
-        passing = sorted({
-            r["solution_idx"]
-            for r in results
-            if r["type"] == "existing_tests" and r["exit_code"] == 0
-        })
+        passing = sorted(
+            {
+                r["solution_idx"]
+                for r in results
+                if r["type"] == "existing_tests" and r["exit_code"] == 0
+            }
+        )
         log = self.environment.logger
         if not passing:
             ran = any(r["type"] == "existing_tests" for r in results)
@@ -72,8 +74,13 @@ class ProblemPipeline:
         return passing, "some_passing"
 
     def generate_candidates(self):
-        patch_file = self.environment.root_output / f"{self.environment.instance_id}.patches.json"
-        test_file = self.environment.root_output / f"{self.environment.instance_id}.tests.json"
+        patch_file = (
+            self.environment.root_output
+            / f"{self.environment.instance_id}.patches.json"
+        )
+        test_file = (
+            self.environment.root_output / f"{self.environment.instance_id}.tests.json"
+        )
 
         def gen_patch_candidates():
             return [
@@ -87,22 +94,31 @@ class ProblemPipeline:
                 for i in range(self.config_agent.num_tests)
             ]
 
-        solution_patches = self.generate(patch_file, gen_patch_candidates, "solution patches")
+        solution_patches = self.generate(
+            patch_file, gen_patch_candidates, "solution patches"
+        )
         test_patches = self.generate(test_file, gen_test_candidates, "test patches")
 
         return solution_patches, test_patches
 
     def evaluate(self, solution_patches, test_patches):
-        eval_file = self.environment.root_output / f"{self.environment.instance_id}.eval.json"
+        eval_file = (
+            self.environment.root_output / f"{self.environment.instance_id}.eval.json"
+        )
 
         def _run():
-            evaluator = PatchEvaluator(self.problem, self.environment, self.config_agent)
+            evaluator = PatchEvaluator(
+                self.problem, self.environment, self.config_agent
+            )
             return evaluator.evaluate(solution_patches, test_patches)
 
         return self.generate(eval_file, _run, "evaluation results")
 
     def select(self, solution_patches, results):
-        decision_file = self.environment.root_output / f"{self.environment.instance_id}.decision.json"
+        decision_file = (
+            self.environment.root_output
+            / f"{self.environment.instance_id}.decision.json"
+        )
 
         def _run():
             passing, status = self.summarize_eval_results(results)
@@ -113,12 +129,11 @@ class ProblemPipeline:
                 filtered = solution_patches
                 original = list(range(len(solution_patches)))
 
-            selector = PatchSelectionAgent(self.problem, self.environment, self.config_agent)
+            selector = PatchSelectionAgent(
+                self.problem, self.environment, self.config_agent
+            )
             choice = selector.select_best_patch(filtered)
-            choice.update({
-                "original_indices": original,
-                "eval_status": status
-            })
+            choice.update({"original_indices": original, "eval_status": status})
             return choice
 
         return self.generate(decision_file, _run, "final decision")
@@ -129,7 +144,9 @@ class ProblemPipeline:
         decision = self.select(sols, results)
         idx = decision["selected_patch_idx"]
         orig = decision["original_indices"][idx]
-        self.environment.logger.info(f"[Pipeline] ✅ Final decision: Patch {idx} (orig {orig})")
+        self.environment.logger.info(
+            f"[Pipeline] ✅ Final decision: Patch {idx} (orig {orig})"
+        )
 
     def _spawn_agent_with_variation(self, index: int) -> AutonomousAgent:
         config_agent = copy.deepcopy(self.config_agent)
@@ -146,4 +163,6 @@ class ProblemPipeline:
             environment=self.environment,
             config_agent=config_agent,
         )
+
+
 # EOF

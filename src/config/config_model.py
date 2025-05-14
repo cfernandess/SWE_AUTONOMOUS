@@ -31,10 +31,12 @@ class ConfigModel(YamlObject):
         1.0, description="Top-p (nucleus) sampling cutoff (0 ≤ top_p ≤ 1)."
     )
     stop: Optional[List[str]] = Field(
-        default=None, description="Optional list of stop sequences to truncate LLM output."
+        default=None,
+        description="Optional list of stop sequences to truncate LLM output.",
     )
     seed: Optional[int] = Field(
-        default=None, description="Optional seed for reproducible sampling (if supported)."
+        default=None,
+        description="Optional seed for reproducible sampling (if supported).",
     )
 
     @property
@@ -56,5 +58,6 @@ class ConfigModel(YamlObject):
         Maximum input context tokens from models metadata (LiteLLM).
         """
         return self.model_info.get("max_tokens", 10_000)
+
 
 # EOF

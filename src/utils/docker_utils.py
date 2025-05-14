@@ -62,4 +62,5 @@ def setup_repo(repo_path: Path, base_commit: str) -> None:
         if code != 0:
             raise RuntimeError(f"[setup_repo] Failed: {cmd}\n{out}")
 
+
 # EOF

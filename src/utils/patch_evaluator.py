@@ -17,10 +17,10 @@ class TestFramework(str, Enum):
 
 class PatchEvaluator:
     def __init__(
-            self,
-            problem: Problem,
-            environment: Environment,
-            config_agent: ConfigAgent,
+        self,
+        problem: Problem,
+        environment: Environment,
+        config_agent: ConfigAgent,
     ):
         self.problem = problem
         self.environment = environment
@@ -35,9 +35,9 @@ class PatchEvaluator:
         return run_command(test_cmd, cwd=self.repo_path)
 
     def evaluate(
-            self,
-            solution_patches: List[str],
-            test_patches: List[str],
+        self,
+        solution_patches: List[str],
+        test_patches: List[str],
     ) -> List[Dict]:
         results = []
         test_cmd = self.get_test_command(self.test_framework)
@@ -47,53 +47,63 @@ class PatchEvaluator:
             patch_out, patch_code = apply_patch(solution_patch, self.repo_path)
 
             if patch_code != 0:
-                results.append({
-                    "solution_idx": i,
-                    "test_idx": None,
-                    "type": "apply_patch_failed",
-                    "output": patch_out,
-                })
+                results.append(
+                    {
+                        "solution_idx": i,
+                        "test_idx": None,
+                        "type": "apply_patch_failed",
+                        "output": patch_out,
+                    }
+                )
                 continue
 
             # Run the existing test suite
             test_out, test_code = self.run_tests(test_cmd)
-            results.append({
-                "solution_idx": i,
-                "test_idx": None,
-                "type": "existing_tests",
-                "exit_code": test_code,
-                "output": test_out,
-            })
+            results.append(
+                {
+                    "solution_idx": i,
+                    "test_idx": None,
+                    "type": "existing_tests",
+                    "exit_code": test_code,
+                    "output": test_out,
+                }
+            )
 
             for j, test_patch in enumerate(test_patches):
                 setup_repo(self.repo_path, self.base_commit)
 
                 _, code1 = apply_patch(solution_patch, self.repo_path)
                 if code1 != 0:
-                    results.append({
-                        "solution_idx": i,
-                        "test_idx": j,
-                        "type": "apply_solution_failed",
-                    })
+                    results.append(
+                        {
+                            "solution_idx": i,
+                            "test_idx": j,
+                            "type": "apply_solution_failed",
+                        }
+                    )
                     continue
 
                 _, code2 = apply_patch(test_patch, self.repo_path)
                 if code2 != 0:
-                    results.append({
-                        "solution_idx": i,
-                        "test_idx": j,
-                        "type": "apply_test_failed",
-                    })
+                    results.append(
+                        {
+                            "solution_idx": i,
+                            "test_idx": j,
+                            "type": "apply_test_failed",
+                        }
+                    )
                     continue
 
                 test_out, test_code = self.run_tests(test_cmd)
-                results.append({
-                    "solution_idx": i,
-                    "test_idx": j,
-                    "type": "test_patch_eval",
-                    "exit_code": test_code,
-                    "output": test_out,
-                })
+                results.append(
+                    {
+                        "solution_idx": i,
+                        "test_idx": j,
+                        "type": "test_patch_eval",
+                        "exit_code": test_code,
+                        "output": test_out,
+                    }
+                )
 
         return results
 
@@ -108,5 +118,6 @@ class PatchEvaluator:
         elif framework == TestFramework.NO_TESTS:
             return ""
         raise ValueError(f"Unsupported test framework: {framework}")
+
 
 # EOF

@@ -50,4 +50,5 @@ class PromptTemplate:
         print(f"[SimplePromptTemplate] Tokens used: {token_count}")
         return prompt
 
+
 #  EOF
