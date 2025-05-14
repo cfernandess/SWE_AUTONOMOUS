@@ -17,11 +17,6 @@ def dummy_problem():
 
 
 @pytest.fixture
-def mock_preprocess_problem(dummy_problem):
-    return PreprocessProblem(problem=dummy_problem)
-
-
-@pytest.fixture
 def mock_environment(tmp_path):
     return Environment(instance_id="mock", root_output=tmp_path, root_path=tmp_path)
 
@@ -42,7 +37,7 @@ def temp_prompt_file(tmp_path) -> Path:
 
 
 def test_prompt_substitution_and_token_count(
-    mock_preprocess_problem,
+    dummy_problem,
     mock_environment,
     mock_config_agent,
     temp_prompt_file,
@@ -52,7 +47,7 @@ def test_prompt_substitution_and_token_count(
         PromptArg(name="task", data="run a test"),
     ]
     prompt = PromptTemplate(
-        preprocess_problem=mock_preprocess_problem,
+        problem=dummy_problem,
         environment=mock_environment,
         config_agent=mock_config_agent,
         path=temp_prompt_file,
@@ -67,12 +62,12 @@ def test_prompt_substitution_and_token_count(
 
 
 def test_missing_variable_raises_key_error(
-    mock_preprocess_problem, mock_environment, mock_config_agent, temp_prompt_file
+    dummy_problem, mock_environment, mock_config_agent, temp_prompt_file
 ):
     # Provide only one arg, but the template expects two
     args = [PromptArg(name="user", data="Coby")]
     prompt = PromptTemplate(
-        preprocess_problem=mock_preprocess_problem,
+        problem=dummy_problem,
         environment=mock_environment,
         config_agent=mock_config_agent,
         path=temp_prompt_file,
@@ -83,7 +78,7 @@ def test_missing_variable_raises_key_error(
 
 
 def test_non_str_data_raises_type_error(
-    mock_preprocess_problem, mock_environment, mock_config_agent, temp_prompt_file
+    dummy_problem, mock_environment, mock_config_agent, temp_prompt_file
 ):
     with pytest.raises(Exception):
         args = [
@@ -93,7 +88,7 @@ def test_non_str_data_raises_type_error(
         args[1].data = 123  # Inject invalid type after init
 
         prompt = PromptTemplate(
-            preprocess_problem=mock_preprocess_problem,
+            problem=dummy_problem,
             environment=mock_environment,
             config_agent=mock_config_agent,
             path=temp_prompt_file,

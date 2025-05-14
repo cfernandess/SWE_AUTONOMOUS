@@ -1,2 +1,2 @@
-# swe_bot
-Software Engineer Robot
+# SWE_AUTONOMOUS
+Software Engineer Autonomous

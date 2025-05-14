@@ -8,20 +8,20 @@ import tiktoken
 
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
-from src.models.preprocess_problem import PreprocessProblem
+from src.models.problem import Problem
 from src.models.prompt_arg import PromptArg
 
 
 class PromptTemplate:
     def __init__(
         self,
-        preprocess_problem: PreprocessProblem,
+        problem: Problem,
         environment: Environment,
         config_agent: ConfigAgent,
         path: Path,
         prompt_args: List[PromptArg],
     ):
-        self.preprocess_problem = preprocess_problem
+        self.problem = problem
         self.environment = environment
         self.config_agent = config_agent
         self.prompt_args = prompt_args
@@ -49,6 +49,5 @@ class PromptTemplate:
         token_count = len(self.encoding.encode(prompt))
         print(f"[SimplePromptTemplate] Tokens used: {token_count}")
         return prompt
-
 
 #  EOF

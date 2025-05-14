@@ -5,7 +5,7 @@ from datasets import load_dataset
 from src.models.problem import Problem
 
 
-def load_swe_bench(path: str, instance_id: str, split: str = "test") -> Problem:
+def load_swe_bench(instance_id: str, path: str = "SWE-bench/SWE-bench_Verified", split: str = "test") -> Problem:
     dataset = load_dataset(path=path, split=split, streaming=False).filter(
         lambda x: x["instance_id"] == instance_id
     )

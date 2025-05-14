@@ -1,10 +1,9 @@
 # config_model.py
 from functools import cached_property
-from typing import Literal
+from typing import Literal, Optional, List
 
 import litellm
 from pydantic import Field, conint, confloat
-
 from src.config.yaml_object import YamlObject
 
 
@@ -17,10 +16,10 @@ class ConfigModel(YamlObject):
     """
 
     model_name: str = Field(
-        "claude-3-opus-20240229", description="Name of the LLM models (e.g., gpt-4o)."
+        "gpt-4o", description="Name of the LLM model (e.g., gpt-4o)."
     )
     vendor_name: Literal["openai", "anthropic", "cohere"] = Field(
-        "anthropic", description="Vendor of the LLM models."
+        "openai", description="Vendor of the LLM model."
     )
     generation_tokens: conint(gt=0, le=10_000) = Field(
         5_000, description="Maximum tokens to generate (must be > 0)."
@@ -28,8 +27,14 @@ class ConfigModel(YamlObject):
     temperature: confloat(ge=0, le=2) = Field(
         0.0, description="Temperature setting for LLM sampling (0 ≤ temperature ≤ 2)."
     )
-    num_samples: conint(gt=0, le=3) = Field(
-        1, description="Number of samples to generate per request (must be > 0)."
+    top_p: confloat(ge=0, le=1) = Field(
+        1.0, description="Top-p (nucleus) sampling cutoff (0 ≤ top_p ≤ 1)."
+    )
+    stop: Optional[List[str]] = Field(
+        default=None, description="Optional list of stop sequences to truncate LLM output."
+    )
+    seed: Optional[int] = Field(
+        default=None, description="Optional seed for reproducible sampling (if supported)."
     )
 
     @property
@@ -43,7 +48,6 @@ class ConfigModel(YamlObject):
                 model=self.model_name, custom_llm_provider=self.vendor_name
             )
         except Exception:
-            # Optional: log or handle errors here
             return {}
 
     @property
@@ -52,6 +56,5 @@ class ConfigModel(YamlObject):
         Maximum input context tokens from models metadata (LiteLLM).
         """
         return self.model_info.get("max_tokens", 10_000)
-
 
 # EOF

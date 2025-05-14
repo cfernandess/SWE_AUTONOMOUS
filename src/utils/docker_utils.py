@@ -62,15 +62,4 @@ def setup_repo(repo_path: Path, base_commit: str) -> None:
         if code != 0:
             raise RuntimeError(f"[setup_repo] Failed: {cmd}\n{out}")
 
-
-def run_pytest(repo_path: Path, marker: str = "") -> Tuple[str, int]:
-    """
-    Run pytest with optional marker and return output and status code.
-    """
-    cmd = "pytest -q"
-    if marker:
-        cmd += f" -m {marker}"
-    return run_command(cmd, cwd=repo_path)
-
-
 # EOF

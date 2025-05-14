@@ -1,9 +1,8 @@
 from smolagents.tools import Tool
 
-from src.agent.agent import AutonomousAgent
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
-from src.models.preprocess_problem import PreprocessProblem
+from src.models.problem import Problem
 
 
 class SequentialThinkingTool(Tool):
@@ -24,17 +23,16 @@ class SequentialThinkingTool(Tool):
 
     def __init__(
         self,
-        preprocess_problem: PreprocessProblem,
+        problem: Problem,
         environment: Environment,
         config_agent: ConfigAgent,
-        max_steps: int = 5,
     ):
         super().__init__()
-        self.problem = preprocess_problem.problem
+        self.problem = problem
         self.environment = environment
         self.config_agent = config_agent
-        self.max_steps = max_steps
-        self.model = AutonomousAgent.get_llm_wrapper(
+        self.max_steps = config_agent.agent_max_steps
+        self.model = self.config_agent.get_llm_wrapper(
             config_model=config_agent.config_model
         )
 

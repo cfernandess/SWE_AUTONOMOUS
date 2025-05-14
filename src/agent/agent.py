@@ -1,35 +1,37 @@
-import os
-from typing import Dict, Any
-
+# agent.py
 from smolagents import ToolCallingAgent
-from smolagents.models import LiteLLMModel, HfApiModel
-
 from src.agent.prompt_template import PromptTemplate
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
-from src.models.preprocess_problem import PreprocessProblem
+from src.models.problem import Problem
 from src.models.prompt_arg import PromptArg
 from src.tools.bash_tool import BashTool
 from src.tools.edit_tool import EditorTool
 from src.tools.sequential_thinking_tool import SequentialThinkingTool
 
 
+class LLMResponseError(Exception):
+    """Custom exception for LLM response errors."""
+
+    pass
+
+
 class AutonomousAgent:
     def __init__(
-        self,
-        preprocess_problem: PreprocessProblem,
-        environment: Environment,
-        config_agent: ConfigAgent,
+            self,
+            problem: Problem,
+            environment: Environment,
+            config_agent: ConfigAgent,
     ):
         """
         Initialize the SWE agent
 
         Args:
-            preprocess_problem:
+            problem:
             environment:
             config_agent:
         """
-        self.preprocess_problem = preprocess_problem
+        self.problem = problem
         self.environment = environment
         self.config_agent = config_agent
         self.logger = environment.logger
@@ -38,7 +40,7 @@ class AutonomousAgent:
             BashTool(),
             EditorTool(),
             SequentialThinkingTool(
-                preprocess_problem=preprocess_problem,
+                problem=problem,
                 environment=environment,
                 config_agent=config_agent,
             ),
@@ -46,19 +48,19 @@ class AutonomousAgent:
         args = [
             PromptArg(
                 name="problem_statement",
-                data=preprocess_problem.problem.problem_statement,
+                data=problem.problem_statement,
             ),
             PromptArg(name="repo_path", data=str(environment.repo_path)),
         ]
         self.prompt_patch_template = PromptTemplate(
-            preprocess_problem=preprocess_problem,
+            problem=problem,
             environment=environment,
             config_agent=config_agent,
             path=environment.root_path / config_agent.patch_prompt_path,
             prompt_args=args,
         )
         self.prompt_test_patch_template = PromptTemplate(
-            preprocess_problem=preprocess_problem,
+            problem=problem,
             environment=environment,
             config_agent=config_agent,
             path=environment.root_path / config_agent.test_patch_prompt_path,
@@ -69,7 +71,7 @@ class AutonomousAgent:
             self.agent = None
             return
 
-        self.model_wrapper = self.get_llm_wrapper(config_agent.config_model)
+        self.model_wrapper = self.config_agent.get_llm_wrapper(config_agent.config_model)
 
         self.agent = ToolCallingAgent(
             tools=self.tools,
@@ -83,7 +85,7 @@ class AutonomousAgent:
         Can be called multiple times to sample variations.
         """
         prompt = self.prompt_patch_template
-        return self.agent.run(prompt.generate())
+        return self.run_task(prompt.generate())
 
     def generate_patch_test(self) -> str:
         """
@@ -91,44 +93,25 @@ class AutonomousAgent:
         Can be reused to validate one or more patches.
         """
         prompt = self.prompt_test_patch_template
-        return self.agent.run(prompt.generate())
+        return self.run_task(prompt.generate())
 
-    def run(self, prompt: str) -> Dict[str, Any]:
-        """
-        Run the SWE agent on a specific repository with a PR description
+    def run_task(self, task: str) -> str:
+        if self.config_agent.mock_mode:
+            return "[MOCK] This is a mocked response."
 
-        Returns:
-            The agent's response
-        """
-        # Run the agent with the formatted prompt
-        response = self.agent.run(prompt)
-
-        return response
-
-    @staticmethod
-    def get_llm_wrapper(config_model):
-        if config_model.vendor_name.startswith("ollama"):
-            return LiteLLMModel(
-                model_id=config_model.lite_llm_name,
-                api_base="http://localhost:11434",
-                api_key="ollama",
-                num_ctx=config_model.max_tokens,
+        if self.agent is None:
+            raise LLMResponseError(
+                "Agent not initialized — did you forget to disable mock_mode?"
             )
-        elif config_model.vendor_name.startswith("openai"):
-            return LiteLLMModel(
-                model_id=config_model.lite_llm_name,
-                api_base="https://api.openai.com/v1",
-                tool_choice="auto",
-                api_key=os.getenv("OPENAI_API_KEY", ""),
-            )
-        elif config_model.vendor_name.startswith("anthropic"):
-            return LiteLLMModel(
-                model_id=config_model.lite_llm_name,
-                api_key=os.getenv("ANTHROPIC_API_KEY", ""),
-                custom_llm_provider="anthropic",
-            )
-        else:
-            return HfApiModel(model=config_model.model_name)
 
+        response = self.agent.run(task=task)
+
+        if not response:
+            return ""
+
+        if isinstance(response, dict) and "description" in response:
+            return response["description"].strip()
+
+        return str(response).strip()
 
 #  EOF
