@@ -11,7 +11,7 @@ from src.agent.problem_pipeline import ProblemPipeline
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.utils.io_utils import project_root
-from src.utils.swe_bench_util import load_swe_bench
+from src.utils.swe_bench_util import load_swe_bench_difficulty
 
 logging.basicConfig(
     level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
@@ -31,9 +31,10 @@ def main():
     if args.local:
         load_dotenv(os.path.join(root_path, ".env"))
 
-    problem = load_swe_bench(instance_id="astropy__astropy-12907")
+    problems = load_swe_bench_difficulty()
+    problem = problems[30]
     environment = Environment(
-        instance_id=problem.instance_id,
+        problem=problem,
         root_output=root_output,
         root_path=root_path,
     )

@@ -35,19 +35,19 @@ class ConfigAgent(YamlObject):
         description="If True, disables actual LLM calls and returns mocked responses (for testing).",
     )
     patch_prompt_path: Path = Field(
-        Path("src/agent/agent_patch.prompt"),
+        Path("src/agent/agent_patch_gpt.prompt"),
         description="Relative path to the main action prompt file.",
     )
     num_patches: conint(gt=0, le=5) = Field(
-        3,
+        1,
         description="Number of agent max retries. Must be >0.",
     )
     test_patch_prompt_path: Path = Field(
         Path("src/agent/agent_test_patch.prompt"),
         description="Relative path to the main test action prompt file.",
     )
-    num_tests: conint(gt=0, le=5) = Field(
-        1,
+    num_tests: conint(ge=0, le=5) = Field(
+        0,
         description="Number of agent max retries. Must be >0.",
     )
 

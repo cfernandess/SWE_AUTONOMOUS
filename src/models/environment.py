@@ -1,12 +1,21 @@
+# environment.py
 import logging
 from pathlib import Path
-from typing import Optional
 
 from pydantic import Field
+from rich.logging import RichHandler
 
 from src.config.yaml_object import YamlObject
 from src.models.problem import Problem
 from src.utils.io_utils import clone_repo
+
+# Set up global terminal logging with Rich
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    handlers=[RichHandler()],
+    force=True
+)
 
 
 class Environment(YamlObject):
@@ -17,32 +26,38 @@ class Environment(YamlObject):
         ..., description="Path to the root directory of the robot_swe project."
     )
     root_output: Path = Field(
-        ...,
-        description="Path to the root directory where all instance outputs are stored.",
+        ..., description="Path to the root directory where all instance outputs are stored."
     )
-    repo_path: Optional[Path] = Field(
-        None, description="Path to the cloned target repository."
+    repo_path: Path = Field(
+        ..., description="Path to the cloned target repository."
     )
-    output_path: Optional[Path] = Field(
-        None,
-        description="Path to the output directory for the current workflow instance.",
+    output_path: Path = Field(
+        ..., description="Path to the output directory for the current workflow instance."
     )
-    problem: Optional[Problem] = Field(
-        None, description="Problem object that describes the issue to be solved."
+    problem: Problem = Field(
+        ..., description="Problem object that describes the issue to be solved."
     )
 
-    @property
-    def logger(self) -> logging.Logger:
-        return logging.getLogger("rich")
+    def __init__(self, root_path: Path, root_output: Path, problem: Problem):
+        # Set fields manually via __setattr__ to bypass Pydantic validation in __init__
+        super().__init__(
+            instance_id=problem.instance_id,
+            root_path=root_path,
+            root_output=root_output,
+            problem=problem,
+            output_path=root_output / "outputs" / problem.instance_id,
+            repo_path=Path(),  # placeholder, set below
+        )
 
-    def load_problem(self, problem: Problem) -> None:
-        """
-        Clone the problem repo and initialize paths.
-        """
-        self.problem = problem
-        self.output_path = self.root_output / self.instance_id
         self.output_path.mkdir(parents=True, exist_ok=True)
 
+        # Add file logging to output_path
+        file_log_path = self.output_path / "log.txt"
+        file_handler = logging.FileHandler(file_log_path, mode="w")
+        file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+        logging.getLogger().addHandler(file_handler)
+
+        # Clone repo and set path
         self.repo_path = clone_repo(
             instance_id=problem.instance_id,
             repo=problem.repo,
@@ -50,3 +65,9 @@ class Environment(YamlObject):
             target_folder=self.root_output / "repos",
             logger=self.logger,
         )
+
+    @property
+    def logger(self) -> logging.Logger:
+        return logging.getLogger("rich")
+
+# EOF

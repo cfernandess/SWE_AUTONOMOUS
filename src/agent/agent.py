@@ -1,13 +1,14 @@
 # agent.py
-from smolagents import ToolCallingAgent
+from typing import List, Optional
+
+from smolagents import ToolCallingAgent, Tool
+
 from src.agent.prompt_template import PromptTemplate
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.models.problem import Problem
 from src.models.prompt_arg import PromptArg
-from src.tools.bash_tool import BashTool
-from src.tools.edit_tool import EditorTool
-from src.tools.sequential_thinking_tool import SequentialThinkingTool
+from src.utils.repo_structure import RepoStructure
 
 
 class LLMResponseError(Exception):
@@ -18,10 +19,11 @@ class LLMResponseError(Exception):
 
 class AutonomousAgent:
     def __init__(
-        self,
-        problem: Problem,
-        environment: Environment,
-        config_agent: ConfigAgent,
+            self,
+            problem: Problem,
+            environment: Environment,
+            config_agent: ConfigAgent,
+            tools: Optional[List[Tool]] = None,
     ):
         """
         Initialize the SWE agent
@@ -30,27 +32,22 @@ class AutonomousAgent:
             problem:
             environment:
             config_agent:
+            tools:
         """
         self.problem = problem
         self.environment = environment
         self.config_agent = config_agent
         self.logger = environment.logger
         # Initialize tools
-        self.tools = [
-            BashTool(),
-            EditorTool(),
-            SequentialThinkingTool(
-                problem=problem,
-                environment=environment,
-                config_agent=config_agent,
-            ),
-        ]
+        self.tools = tools if tools else []
+        self.repo_structure, _ = RepoStructure(repo_path=self.environment.repo_path, file_ext=[".py"]).generate_structure()
         args = [
             PromptArg(
                 name="problem_statement",
                 data=problem.problem_statement,
             ),
             PromptArg(name="repo_path", data=str(environment.repo_path)),
+            PromptArg(name="repo_structure", data=self.repo_structure)
         ]
         self.prompt_patch_template = PromptTemplate(
             problem=problem,
@@ -115,6 +112,5 @@ class AutonomousAgent:
             return response["description"].strip()
 
         return str(response).strip()
-
 
 #  EOF

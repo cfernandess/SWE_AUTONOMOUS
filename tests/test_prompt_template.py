@@ -16,8 +16,8 @@ def dummy_problem():
 
 
 @pytest.fixture
-def mock_environment(tmp_path):
-    return Environment(instance_id="mock", root_output=tmp_path, root_path=tmp_path)
+def mock_environment(tmp_path, dummy_problem):
+    return Environment(problem=dummy_problem, root_output=tmp_path, root_path=tmp_path)
 
 
 @pytest.fixture
@@ -36,10 +36,10 @@ def temp_prompt_file(tmp_path) -> Path:
 
 
 def test_prompt_substitution_and_token_count(
-    dummy_problem,
-    mock_environment,
-    mock_config_agent,
-    temp_prompt_file,
+        dummy_problem,
+        mock_environment,
+        mock_config_agent,
+        temp_prompt_file,
 ):
     args = [
         PromptArg(name="user", data="Coby"),
@@ -61,7 +61,7 @@ def test_prompt_substitution_and_token_count(
 
 
 def test_missing_variable_raises_key_error(
-    dummy_problem, mock_environment, mock_config_agent, temp_prompt_file
+        dummy_problem, mock_environment, mock_config_agent, temp_prompt_file
 ):
     # Provide only one arg, but the template expects two
     args = [PromptArg(name="user", data="Coby")]
@@ -77,7 +77,7 @@ def test_missing_variable_raises_key_error(
 
 
 def test_non_str_data_raises_type_error(
-    dummy_problem, mock_environment, mock_config_agent, temp_prompt_file
+        dummy_problem, mock_environment, mock_config_agent, temp_prompt_file
 ):
     with pytest.raises(Exception):
         args = [
