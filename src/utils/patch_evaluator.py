@@ -35,8 +35,6 @@ class PatchEvaluator:
 
         # instantiate lint tool once
 
-    import re
-
     @staticmethod
     def extract_file_path_from_diff(diff_text: str) -> str:
         """
