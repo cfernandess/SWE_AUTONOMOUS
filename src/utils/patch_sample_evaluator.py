@@ -40,7 +40,9 @@ class PatchSampleEvaluator:
         test_patches: List[str],
     ) -> List[Dict]:
         results = []
-        test_cmd = TestFrameworkUtils.get_test_command(TestFrameworkUtils.detect_test_framework(self.repo_path))
+        test_cmd = TestFrameworkUtils.get_test_command(
+            TestFrameworkUtils.detect_test_framework(self.repo_path)
+        )
 
         for i, solution_patch in enumerate(solution_patches):
             setup_repo(self.repo_path, self.base_commit)
@@ -106,5 +108,6 @@ class PatchSampleEvaluator:
                 )
 
         return results
+
 
 # EOF

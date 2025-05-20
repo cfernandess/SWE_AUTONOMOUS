@@ -55,7 +55,9 @@ class ProblemPipeline:
 
     def generate_patch(self) -> str:
         self.logger.info("[Pipeline] 🧠 Generating single patch candidate...")
-        patch_file = self.environment.output_path / f"{self.environment.instance_id}.patch.json"
+        patch_file = (
+            self.environment.output_path / f"{self.environment.instance_id}.patch.json"
+        )
 
         def run_agent():
             agent = AutonomousAgent(
@@ -83,7 +85,9 @@ class ProblemPipeline:
         )
         results = evaluator.evaluate(json.dumps({"diff": self.problem.patch}))
 
-        eval_file = self.environment.output_path / f"{self.environment.instance_id}.eval.json"
+        eval_file = (
+            self.environment.output_path / f"{self.environment.instance_id}.eval.json"
+        )
         eval_file.write_text(json.dumps(results, indent=2))
         self.logger.info("[Pipeline] 🧾 Evaluation results saved.")
 
@@ -91,4 +95,3 @@ class ProblemPipeline:
             "patch": patch,
             "evaluation": results,
         }
-

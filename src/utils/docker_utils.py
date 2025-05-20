@@ -19,7 +19,13 @@ def apply_patch(patch_text: str, repo_path: Path) -> Tuple[str, int]:
     """
     # Remove Markdown code block formatting if present
     if patch_text.strip().startswith("```"):
-        patch_text = patch_text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        patch_text = (
+            patch_text.strip()
+            .removeprefix("```json")
+            .removeprefix("```")
+            .removesuffix("```")
+            .strip()
+        )
 
     try:
         patch_obj = json.loads(patch_text)
@@ -75,24 +81,34 @@ def setup_repo(repo_path: Path, env_commit: str, base_commit: str) -> None:
 
 
 def install_dependencies(repo_path: Path) -> None:
-    subprocess.run(["pip", "install", "--upgrade", "pip", "setuptools==65.5.1"], check=True)
+    subprocess.run(
+        ["pip", "install", "--upgrade", "pip", "setuptools==65.5.1"], check=True
+    )
 
     # Pin numpy to a version that avoids core API deprecation
-    subprocess.run([
-        "pip", "install",
-        "wheel",
-        "cython",
-        "numpy<2.0",  # <- Avoid np.core deprecation
-        "extension-helpers",
-        "pyerfa>=2.0",
-        "setuptools_scm[toml]"
-    ], check=True)
+    subprocess.run(
+        [
+            "pip",
+            "install",
+            "wheel",
+            "cython",
+            "numpy<2.0",  # <- Avoid np.core deprecation
+            "extension-helpers",
+            "pyerfa>=2.0",
+            "setuptools_scm[toml]",
+        ],
+        check=True,
+    )
 
     requirements = repo_path / "requirements.txt"
     if requirements.exists():
-        subprocess.run(["pip", "install", "-r", str(requirements)], cwd=repo_path, check=True)
+        subprocess.run(
+            ["pip", "install", "-r", str(requirements)], cwd=repo_path, check=True
+        )
     elif (repo_path / "pyproject.toml").exists() or (repo_path / "setup.py").exists():
-        subprocess.run(["pip", "install", "--no-build-isolation", "."], cwd=repo_path, check=True)
+        subprocess.run(
+            ["pip", "install", "--no-build-isolation", "."], cwd=repo_path, check=True
+        )
 
 
 # EOF

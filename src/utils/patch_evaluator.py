@@ -12,10 +12,10 @@ from src.utils.docker_utils import setup_repo, run_command
 
 class PatchEvaluator:
     def __init__(
-            self,
-            problem: Problem,
-            environment: Environment,
-            config_agent: ConfigAgent,
+        self,
+        problem: Problem,
+        environment: Environment,
+        config_agent: ConfigAgent,
     ):
         self.problem = problem
         self.environment = environment
@@ -26,7 +26,7 @@ class PatchEvaluator:
 
     @staticmethod
     def extract_file_path_from_diff(diff_text: str) -> str:
-        match = re.search(r'^\+\+\+ b/(.+)', diff_text, re.MULTILINE)
+        match = re.search(r"^\+\+\+ b/(.+)", diff_text, re.MULTILINE)
         return match.group(1) if match else None
 
     @staticmethod
@@ -52,7 +52,9 @@ class PatchEvaluator:
                         norm = self.normalize_nodeid(test["nodeid"])
                         results[norm] = test["outcome"]
             except Exception as e:
-                self.logger.warning(f"[PatchEvaluator] ⚠️ Failed to parse pytest JSON report: {e}")
+                self.logger.warning(
+                    f"[PatchEvaluator] ⚠️ Failed to parse pytest JSON report: {e}"
+                )
 
         return out, code, results
 
@@ -64,7 +66,7 @@ class PatchEvaluator:
             ["git", "apply", str(diff_path)],
             cwd=self.repo_path,
             capture_output=True,
-            text=True
+            text=True,
         )
         diff_path.unlink(missing_ok=True)
 
@@ -74,8 +76,11 @@ class PatchEvaluator:
         return True, "Patch applied successfully"
 
     def evaluate(self, solution_patch: str) -> Dict:
-        setup_repo(repo_path=self.repo_path, env_commit=self.problem.environment_setup_commit,
-                   base_commit=self.problem.base_commit)
+        setup_repo(
+            repo_path=self.repo_path,
+            env_commit=self.problem.environment_setup_commit,
+            base_commit=self.problem.base_commit,
+        )
 
         try:
             patch_obj = json.loads(solution_patch)
@@ -86,7 +91,7 @@ class PatchEvaluator:
         except Exception as e:
             return {
                 "type": "invalid_patch_format",
-                "output": f"ERROR: Could not parse patch JSON - {e}"
+                "output": f"ERROR: Could not parse patch JSON - {e}",
             }
 
         self.logger.info(f"[PatchEvaluator] 🧩 Applying patch to file: {path_str}")
@@ -112,9 +117,19 @@ class PatchEvaluator:
         self.logger.info(f"[PatchEvaluator] 🧪 Running tests: {tests_to_run}")
         test_out, test_code, test_results = self.run_tests_and_check()
 
-        normalized_results = {self.normalize_nodeid(k): v for k, v in test_results.items()}
-        failing = [t for t in fail_to_pass if normalized_results.get(self.normalize_nodeid(t)) != "passed"]
-        regressions = [t for t in pass_to_pass if normalized_results.get(self.normalize_nodeid(t)) != "passed"]
+        normalized_results = {
+            self.normalize_nodeid(k): v for k, v in test_results.items()
+        }
+        failing = [
+            t
+            for t in fail_to_pass
+            if normalized_results.get(self.normalize_nodeid(t)) != "passed"
+        ]
+        regressions = [
+            t
+            for t in pass_to_pass
+            if normalized_results.get(self.normalize_nodeid(t)) != "passed"
+        ]
 
         success = not failing and not regressions
 
@@ -145,7 +160,9 @@ class PatchEvaluator:
         if code == 0:
             return True, "PASSED"
 
-        self.logger.warning("[Ruff] ❌ Initial Ruff check failed. Attempting auto-fix...")
+        self.logger.warning(
+            "[Ruff] ❌ Initial Ruff check failed. Attempting auto-fix..."
+        )
         fix_code, fix_out = _run_ruff(fix=True)
         if fix_code != 0:
             return False, f"ERROR after --fix:\n{fix_out}"
@@ -156,5 +173,6 @@ class PatchEvaluator:
             return True, "PASSED: AUTO-FIX - SUCCEEDED"
         else:
             return False, f"ERROR after fix: {confirm_out}"
+
 
 # EOF

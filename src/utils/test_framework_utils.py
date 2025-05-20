@@ -50,7 +50,9 @@ class TestFrameworkUtils:
             for file in files:
                 if file.startswith("test_") and file.endswith(".py"):
                     try:
-                        with open(os.path.join(root, file), encoding="utf-8", errors="ignore") as f:
+                        with open(
+                            os.path.join(root, file), encoding="utf-8", errors="ignore"
+                        ) as f:
                             content = f.read()
                             if "pytest" in content:
                                 return TestFramework.PYTEST

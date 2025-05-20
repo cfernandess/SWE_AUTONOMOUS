@@ -35,7 +35,7 @@ def load_swe_bench(
 def load_swe_bench_difficulty(
     path: str = "princeton-nlp/SWE-bench_Verified",
     split: str = "test",
-    difficulty_tag: str = "<15 min fix"
+    difficulty_tag: str = "<15 min fix",
 ) -> List[Problem]:
     dataset = load_dataset(path=path, split=split, streaming=False)
 
@@ -59,5 +59,6 @@ def load_swe_bench_difficulty(
         )
         for s in easy_samples
     ]
+
 
 # EOF

@@ -78,65 +78,99 @@ class ProblemSamplePipeline:
             self.logger.warning("[Evaluator] ⚠️ All patches failed the test suite.")
             return [], "no_passing"
 
-        self.logger.info(f"[Evaluator] ✅ {len(passing)} patch(es) passed the test suite.")
+        self.logger.info(
+            f"[Evaluator] ✅ {len(passing)} patch(es) passed the test suite."
+        )
         return passing, "some_passing"
 
     def generate_candidates(self):
         self.logger.info("[Pipeline] 📦 Generating patch and test candidates...")
-        patch_file = self.environment.output_path / f"{self.environment.instance_id}.patches.json"
-        test_file = self.environment.output_path / f"{self.environment.instance_id}.tests.json"
+        patch_file = (
+            self.environment.output_path
+            / f"{self.environment.instance_id}.patches.json"
+        )
+        test_file = (
+            self.environment.output_path / f"{self.environment.instance_id}.tests.json"
+        )
 
         def gen_patch_candidates():
-            self.logger.info(f"[Generator] 🔁 Generating {self.config_agent.num_patches} solution patches...")
+            self.logger.info(
+                f"[Generator] 🔁 Generating {self.config_agent.num_patches} solution patches..."
+            )
             return [
                 self._spawn_agent_with_variation(i).generate_patch()
                 for i in range(self.config_agent.num_patches)
             ]
 
         def gen_test_candidates():
-            self.logger.info(f"[Generator] 🔁 Generating {self.config_agent.num_tests} test patches...")
+            self.logger.info(
+                f"[Generator] 🔁 Generating {self.config_agent.num_tests} test patches..."
+            )
             return [
                 self._spawn_agent_with_variation(i).generate_patch_test()
                 for i in range(self.config_agent.num_tests)
             ]
 
-        solution_patches = self.generate(patch_file, gen_patch_candidates, "solution patches")
+        solution_patches = self.generate(
+            patch_file, gen_patch_candidates, "solution patches"
+        )
         test_patches = self.generate(test_file, gen_test_candidates, "test patches")
 
-        self.logger.info(f"[Pipeline] ✅ Generated {len(solution_patches)} solution and {len(test_patches)} test patches.")
+        self.logger.info(
+            f"[Pipeline] ✅ Generated {len(solution_patches)} solution and {len(test_patches)} test patches."
+        )
         return solution_patches, test_patches
 
     def evaluate(self, solution_patches, test_patches):
         self.logger.info("[Pipeline] 🧪 Running evaluation on generated patches...")
-        eval_file = self.environment.output_path / f"{self.environment.instance_id}.eval.json"
+        eval_file = (
+            self.environment.output_path / f"{self.environment.instance_id}.eval.json"
+        )
 
         def _run():
-            evaluator = PatchEvaluator(self.problem, self.environment, self.config_agent)
+            evaluator = PatchEvaluator(
+                self.problem, self.environment, self.config_agent
+            )
             return evaluator.evaluate(solution_patches, test_patches)
 
         results = self.generate(eval_file, _run, "evaluation results")
-        self.logger.info(f"[Pipeline] 🧾 Evaluation produced {len(results)} result entries.")
+        self.logger.info(
+            f"[Pipeline] 🧾 Evaluation produced {len(results)} result entries."
+        )
         return results
 
     def select(self, solution_patches, results):
-        self.logger.info("[Pipeline] 🤖 Selecting best patch based on evaluation results...")
-        decision_file = self.environment.output_path / f"{self.environment.instance_id}.decision.json"
+        self.logger.info(
+            "[Pipeline] 🤖 Selecting best patch based on evaluation results..."
+        )
+        decision_file = (
+            self.environment.output_path
+            / f"{self.environment.instance_id}.decision.json"
+        )
 
         def _run():
             passing, status = self.summarize_eval_results(results)
             if passing:
                 filtered = [solution_patches[i] for i in passing]
                 original = passing
-                self.logger.info(f"[Selection] 🟢 {len(passing)} candidate(s) passed. Selecting among them.")
+                self.logger.info(
+                    f"[Selection] 🟢 {len(passing)} candidate(s) passed. Selecting among them."
+                )
             else:
                 filtered = solution_patches
                 original = list(range(len(solution_patches)))
-                self.logger.info(f"[Selection] 🟡 No passing patches. Falling back to all {len(filtered)} candidates.")
+                self.logger.info(
+                    f"[Selection] 🟡 No passing patches. Falling back to all {len(filtered)} candidates."
+                )
 
-            selector = PatchSelectionAgent(self.problem, self.environment, self.config_agent)
+            selector = PatchSelectionAgent(
+                self.problem, self.environment, self.config_agent
+            )
             choice = selector.select_best_patch(filtered)
             choice.update({"original_indices": original, "eval_status": status})
-            self.logger.info(f"[Selection] ✅ Selected patch index {choice['selected_patch_idx']} (original {original[choice['selected_patch_idx']]})")
+            self.logger.info(
+                f"[Selection] ✅ Selected patch index {choice['selected_patch_idx']} (original {original[choice['selected_patch_idx']]})"
+            )
             return choice
 
         return self.generate(decision_file, _run, "final decision")
@@ -149,7 +183,9 @@ class ProblemSamplePipeline:
 
         idx = decision["selected_patch_idx"]
         orig = decision["original_indices"][idx]
-        self.logger.info(f"[Pipeline] 🏁 Final decision: Patch {idx} (original index {orig}) selected.")
+        self.logger.info(
+            f"[Pipeline] 🏁 Final decision: Patch {idx} (original index {orig}) selected."
+        )
         self.logger.info("[Pipeline] ✅ Pipeline complete.")
 
     def _spawn_agent_with_variation(self, index: int) -> AutonomousAgent:

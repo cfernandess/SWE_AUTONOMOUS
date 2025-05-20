@@ -4,11 +4,13 @@ import json
 import logging
 import os
 import pprint
+import tempfile
 from pathlib import Path
 
 from dotenv import load_dotenv
 from rich.logging import RichHandler
 
+from src.agent.problem_pipeline import ProblemPipeline
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.utils.io_utils import project_root
@@ -26,10 +28,11 @@ def main():
     p.add_argument("--local", action="store_true")
     args = p.parse_args()
 
+    if args.local:
+        root_output = Path("/Users/coby/TEMP")
+    else:
+        root_output = Path(tempfile.mkdtemp(prefix="swe_"))
     root_path = project_root() if args.local else Path("/app")
-    root_output = (
-        Path("/tmp/output") if not args.local else Path("/Users/coby/TEMP")
-    )
     root_output.mkdir(parents=True, exist_ok=True)
 
     if args.local:
@@ -48,12 +51,10 @@ def main():
     results = evaluator.evaluate(solution_patch)
     pprint.pprint(solution_patch)
     pprint.pprint(results)
-    """
     pipeline = ProblemPipeline(
         problem=problem, environment=environment, config_agent=config_agent
     )
     pipeline.run()
-    """
 
 
 if __name__ == "__main__":

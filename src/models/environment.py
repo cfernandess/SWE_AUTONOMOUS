@@ -11,10 +11,7 @@ from src.utils.io_utils import clone_repo
 
 # Set up global terminal logging with Rich
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    handlers=[RichHandler()],
-    force=True
+    level=logging.INFO, format="%(message)s", handlers=[RichHandler()], force=True
 )
 
 
@@ -26,13 +23,13 @@ class Environment(YamlObject):
         ..., description="Path to the root directory of the robot_swe project."
     )
     root_output: Path = Field(
-        ..., description="Path to the root directory where all instance outputs are stored."
+        ...,
+        description="Path to the root directory where all instance outputs are stored.",
     )
-    repo_path: Path = Field(
-        ..., description="Path to the cloned target repository."
-    )
+    repo_path: Path = Field(..., description="Path to the cloned target repository.")
     output_path: Path = Field(
-        ..., description="Path to the output directory for the current workflow instance."
+        ...,
+        description="Path to the output directory for the current workflow instance.",
     )
     problem: Problem = Field(
         ..., description="Problem object that describes the issue to be solved."
@@ -54,7 +51,9 @@ class Environment(YamlObject):
         # Add file logging to output_path
         file_log_path = self.output_path / "log.txt"
         file_handler = logging.FileHandler(file_log_path, mode="w")
-        file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        )
         logging.getLogger().addHandler(file_handler)
 
         # Clone repo and set path
@@ -69,5 +68,6 @@ class Environment(YamlObject):
     @property
     def logger(self) -> logging.Logger:
         return logging.getLogger("rich")
+
 
 # EOF

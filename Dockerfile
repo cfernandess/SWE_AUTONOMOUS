@@ -27,4 +27,3 @@ ENV PYTHONPATH=/app
 
 # Run main (overridden by entrypoint or command args)
 ENTRYPOINT ["python", "src/main.py"]
-

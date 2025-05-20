@@ -24,10 +24,14 @@ class Problem(YamlObject):
     environment_setup_commit: str = Field("N/A", description="Setup commit hash.")
     patch: str = Field("N/A", description="PR's non-test patch content.")
     test_patch: str = Field("N/A", description="PR's test-related patch.")
-    fail_to_pass: str = Field(default="[]",
-                              description="JSON-encoded list of tests that failed before and passed after.")
-    pass_to_pass: str = Field(default="[]",
-                              description="JSON-encoded list of tests that passed before and after.")
+    fail_to_pass: str = Field(
+        default="[]",
+        description="JSON-encoded list of tests that failed before and passed after.",
+    )
+    pass_to_pass: str = Field(
+        default="[]",
+        description="JSON-encoded list of tests that passed before and after.",
+    )
     model_config = {
         "frozen": True,
         "strict": False,  # ← allow coercion from str to Path

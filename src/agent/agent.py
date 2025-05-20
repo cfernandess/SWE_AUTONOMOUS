@@ -19,11 +19,11 @@ class LLMResponseError(Exception):
 
 class AutonomousAgent:
     def __init__(
-            self,
-            problem: Problem,
-            environment: Environment,
-            config_agent: ConfigAgent,
-            tools: Optional[List[Tool]] = None,
+        self,
+        problem: Problem,
+        environment: Environment,
+        config_agent: ConfigAgent,
+        tools: Optional[List[Tool]] = None,
     ):
         """
         Initialize the SWE agent
@@ -40,14 +40,16 @@ class AutonomousAgent:
         self.logger = environment.logger
         # Initialize tools
         self.tools = tools if tools else []
-        self.repo_structure, _ = RepoStructure(repo_path=self.environment.repo_path, file_ext=[".py"]).generate_structure()
+        self.repo_structure, _ = RepoStructure(
+            repo_path=self.environment.repo_path, file_ext=[".py"]
+        ).generate_structure()
         args = [
             PromptArg(
                 name="problem_statement",
                 data=problem.problem_statement,
             ),
             PromptArg(name="repo_path", data=str(environment.repo_path)),
-            PromptArg(name="repo_structure", data=self.repo_structure)
+            PromptArg(name="repo_structure", data=self.repo_structure),
         ]
         self.prompt_patch_template = PromptTemplate(
             problem=problem,
@@ -112,5 +114,6 @@ class AutonomousAgent:
             return response["description"].strip()
 
         return str(response).strip()
+
 
 #  EOF
