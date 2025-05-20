@@ -1,3 +1,4 @@
+# test_framework_utils.py
 import os
 import subprocess
 from enum import Enum
@@ -12,23 +13,24 @@ class TestFramework(str, Enum):
 
 
 class TestFrameworkUtils:
+    TEST_COMMANDS = {
+        TestFramework.PYTEST: "pytest -q",
+        TestFramework.UNITTEST: "python -m unittest discover",
+        TestFramework.TOX: "tox",
+        TestFramework.NO_TESTS: "",
+    }
+
     @staticmethod
     def get_test_command(framework: TestFramework) -> str:
-        if framework == TestFramework.PYTEST:
-            return "pytest -q"
-        elif framework == TestFramework.UNITTEST:
-            return "python -m unittest discover"
-        elif framework == TestFramework.TOX:
-            return "tox --no-deps"
-        elif framework == TestFramework.NO_TESTS:
-            return ""
-        raise ValueError(f"Unsupported test framework: {framework}")
+        try:
+            return TestFrameworkUtils.TEST_COMMANDS[framework]
+        except KeyError:
+            raise ValueError(f"Unsupported test framework: {framework}")
 
     @staticmethod
     def detect_test_framework(repo_path: Path) -> TestFramework:
         tox_path = repo_path / "tox.ini"
         if tox_path.exists():
-            # Try running `tox -l` to ensure tox.ini is valid
             try:
                 result = subprocess.run(
                     ["tox", "-l"],

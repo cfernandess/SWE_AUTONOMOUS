@@ -27,8 +27,8 @@ def load_swe_bench(
         environment_setup_commit=sample.get("environment_setup_commit", "N/A"),
         patch=sample.get("patch", "N/A"),
         test_patch=sample.get("test_patch", "N/A"),
-        FAIL_TO_PASS=sample.get("FAIL_TO_PASS", "N/A"),
-        PASS_TO_PASS=sample.get("PASS_TO_PASS", "N/A"),
+        fail_to_pass=sample.get("FAIL_TO_PASS", "[]"),
+        pass_to_pass=sample.get("PASS_TO_PASS", "[]"),
     )
 
 
@@ -54,13 +54,10 @@ def load_swe_bench_difficulty(
             environment_setup_commit=s.get("environment_setup_commit", "N/A"),
             patch=s.get("patch", "N/A"),
             test_patch=s.get("test_patch", "N/A"),
-            FAIL_TO_PASS=s.get("FAIL_TO_PASS", "N/A"),
-            PASS_TO_PASS=s.get("PASS_TO_PASS", "N/A"),
+            fail_to_pass=s.get("FAIL_TO_PASS", "[]"),
+            pass_to_pass=s.get("PASS_TO_PASS", "[]"),
         )
         for s in easy_samples
     ]
-
-
-
 
 # EOF

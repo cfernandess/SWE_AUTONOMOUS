@@ -1,6 +1,6 @@
 # patch_evaluator.py
 from enum import Enum
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
@@ -29,7 +29,7 @@ class PatchSampleEvaluator:
         self.repo_path = self.environment.repo_path
         self.base_commit = self.problem.base_commit
 
-    def run_tests(self, test_cmd: str) -> (str, int):
+    def run_tests(self, test_cmd: List[str]) -> Tuple[str, int]:
         if not test_cmd:
             return "[SKIPPED] No test command specified", -1
         return run_command(test_cmd, cwd=self.repo_path)

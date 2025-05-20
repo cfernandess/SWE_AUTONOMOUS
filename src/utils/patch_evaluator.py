@@ -2,29 +2,20 @@
 import json
 import re
 import subprocess
-from enum import Enum
 from typing import Dict, Tuple
 
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.models.problem import Problem
-from src.utils.docker_utils import setup_repo, run_command, apply_diff
-from src.utils.test_framework_utils import TestFrameworkUtils
-
-
-class TestFramework(str, Enum):
-    PYTEST = "pytest"
-    UNITTEST = "unittest"
-    TOX = "tox"
-    NO_TESTS = "none"
+from src.utils.docker_utils import setup_repo, run_command
 
 
 class PatchEvaluator:
     def __init__(
-        self,
-        problem: Problem,
-        environment: Environment,
-        config_agent: ConfigAgent,
+            self,
+            problem: Problem,
+            environment: Environment,
+            config_agent: ConfigAgent,
     ):
         self.problem = problem
         self.environment = environment
@@ -33,30 +24,65 @@ class PatchEvaluator:
         self.base_commit = self.problem.base_commit
         self.logger = self.environment.logger
 
-        # instantiate lint tool once
-
     @staticmethod
     def extract_file_path_from_diff(diff_text: str) -> str:
-        """
-        Extracts the target file path from the first `+++ b/...` line in a unified diff.
-        Returns None if no such line exists.
-        """
         match = re.search(r'^\+\+\+ b/(.+)', diff_text, re.MULTILINE)
         return match.group(1) if match else None
 
-    def run_tests(self, test_cmd: str) -> (str, int):
-        if not test_cmd:
-            return "[SKIPPED] No test command specified", -1
-        return run_command(test_cmd, cwd=self.repo_path)
+    @staticmethod
+    def normalize_nodeid(nodeid: str) -> str:
+        return nodeid.replace("\\", "/").lstrip("./")
+
+    def run_tests_and_check(self) -> Tuple[str, int, Dict[str, str]]:
+        report_path = self.repo_path / ".pytest_results.json"
+        test_cmd = [
+            "pytest",
+            "--json-report",
+            f"--json-report-file={report_path}",
+            "-q",
+        ]
+        out, code = run_command(test_cmd, cwd=self.repo_path)
+
+        results = {}
+        if report_path.exists():
+            try:
+                with report_path.open() as f:
+                    report = json.load(f)
+                    for test in report.get("tests", []):
+                        norm = self.normalize_nodeid(test["nodeid"])
+                        results[norm] = test["outcome"]
+            except Exception as e:
+                self.logger.warning(f"[PatchEvaluator] ⚠️ Failed to parse pytest JSON report: {e}")
+
+        return out, code, results
+
+    def apply_diff(self, diff_text: str) -> Tuple[bool, str]:
+        diff_path = self.repo_path / "temp_patch.diff"
+        diff_path.write_text(diff_text)
+
+        result = subprocess.run(
+            ["git", "apply", str(diff_path)],
+            cwd=self.repo_path,
+            capture_output=True,
+            text=True
+        )
+        diff_path.unlink(missing_ok=True)
+
+        if result.returncode != 0:
+            return False, result.stderr.strip()
+
+        return True, "Patch applied successfully"
 
     def evaluate(self, solution_patch: str) -> Dict:
-        setup_repo(self.repo_path, self.base_commit)
+        setup_repo(repo_path=self.repo_path, env_commit=self.problem.environment_setup_commit,
+                   base_commit=self.problem.base_commit)
 
-        # 1. Load patch JSON
         try:
             patch_obj = json.loads(solution_patch)
             diff = patch_obj["diff"]
             path_str = self.extract_file_path_from_diff(diff)
+            if path_str is None:
+                raise ValueError("No valid file path found in diff")
         except Exception as e:
             return {
                 "type": "invalid_patch_format",
@@ -64,46 +90,46 @@ class PatchEvaluator:
             }
 
         self.logger.info(f"[PatchEvaluator] 🧩 Applying patch to file: {path_str}")
-        file_path = self.repo_path / path_str
-        is_new_file = "@@ -0,0 +" in diff
-
-        try:
-            original_text = "" if is_new_file else file_path.read_text()
-            patched_text, code = apply_diff(diff, self.repo_path)
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            file_path.write_text(patched_text)
-        except Exception as e:
+        success, apply_msg = self.apply_diff(diff)
+        if not success:
             return {
                 "type": "apply_patch_failed",
-                "output": f"Patch application error: {e}",
+                "output": f"Patch application error: {apply_msg}",
             }
 
         self.logger.info("[PatchEvaluator] 🧹 Running Ruff lint check...")
-        passed, lint_result = self.run_ruff_lint_and_fix()
+        passed, lint_result = self.run_ruff_lint_and_fix(path_str)
         if not passed:
             return {
                 "type": "ruff_lint_failed",
                 "output": lint_result,
             }
 
-        self.logger.info(f"[PatchEvaluator] 🧪 Running tests (Ruff: {lint_result})...")
-        test_cmd = TestFrameworkUtils.get_test_command(
-            TestFrameworkUtils.detect_test_framework(self.repo_path)
-        )
-        test_out, test_code = self.run_tests(test_cmd)
+        fail_to_pass = json.loads(self.problem.fail_to_pass)
+        pass_to_pass = json.loads(self.problem.pass_to_pass)
+        tests_to_run = fail_to_pass + pass_to_pass
+
+        self.logger.info(f"[PatchEvaluator] 🧪 Running tests: {tests_to_run}")
+        test_out, test_code, test_results = self.run_tests_and_check()
+
+        normalized_results = {self.normalize_nodeid(k): v for k, v in test_results.items()}
+        failing = [t for t in fail_to_pass if normalized_results.get(self.normalize_nodeid(t)) != "passed"]
+        regressions = [t for t in pass_to_pass if normalized_results.get(self.normalize_nodeid(t)) != "passed"]
+
+        success = not failing and not regressions
 
         return {
             "type": "existing_tests",
-            "exit_code": test_code,
+            "success": success,
+            "failing_tests": failing,
+            "regressions": regressions,
             "output": test_out,
             "lint_status": lint_result,
         }
 
-    def run_ruff_lint_and_fix(self) -> Tuple[bool, str]:
-        """Run Ruff linter, fix if needed, and confirm no remaining errors."""
-
+    def run_ruff_lint_and_fix(self, file_path: str) -> Tuple[bool, str]:
         def _run_ruff(fix: bool = False) -> Tuple[int, str]:
-            args = ["ruff", "check"]
+            args = ["ruff", "check", "--isolated", "--fix", file_path]
             if fix:
                 args.append("--fix")
             proc = subprocess.run(
@@ -124,7 +150,6 @@ class PatchEvaluator:
         if fix_code != 0:
             return False, f"ERROR after --fix:\n{fix_out}"
 
-        # Final confirmation pass
         confirm_code, confirm_out = _run_ruff(fix=False)
         if confirm_code == 0:
             self.logger.info("[Ruff] ✅ Auto-fix succeeded.")
