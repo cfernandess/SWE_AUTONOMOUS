@@ -2,6 +2,7 @@
 import json
 import subprocess
 import uuid
+from typing import Optional
 
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
@@ -20,8 +21,16 @@ class PatchEvaluator:
         self.config_agent = config_agent
         self.logger = environment.logger
 
-    def evaluate(self, patch: str) -> dict:
+    def evaluate(self, patch: Optional[str] = None) -> dict:
         instance_id = self.problem.instance_id
+
+        # 🔁 Load cached patch if not provided
+        if patch is None:
+            patch_path = self.environment.output_path / f"{instance_id}.patch.json"
+            if not patch_path.exists():
+                raise FileNotFoundError(f"No cached patch file at {patch_path}")
+            patch = json.loads(patch_path.read_text())
+
         predictions_path = (
             self.environment.output_path / f"{instance_id}.predictions.json"
         )
