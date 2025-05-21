@@ -31,6 +31,10 @@ class Environment(YamlObject):
         ...,
         description="Path to the output directory for the current workflow instance.",
     )
+    swebench_path: Path = Field(
+        Path("/Users/coby/PycharmProjects/SWE-bench"),
+        description="Path to the SWE-bench.",
+    )
     problem: Problem = Field(
         ..., description="Problem object that describes the issue to be solved."
     )

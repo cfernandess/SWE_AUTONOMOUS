@@ -1,9 +1,7 @@
 # main.py
 import argparse
-import json
 import logging
 import os
-import pprint
 import tempfile
 from pathlib import Path
 
@@ -14,7 +12,6 @@ from src.agent.problem_pipeline import ProblemPipeline
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.utils.io_utils import project_root
-from src.utils.patch_evaluator import PatchEvaluator
 from src.utils.swe_bench_util import load_swe_bench_difficulty
 
 logging.basicConfig(
@@ -24,7 +21,7 @@ logging.basicConfig(
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--instance_id", required=True)
+    # p.add_argument("--instance_id", required=True)
     p.add_argument("--local", action="store_true")
     args = p.parse_args()
 
@@ -39,18 +36,13 @@ def main():
         load_dotenv(os.path.join(root_path, ".env"))
 
     problems = load_swe_bench_difficulty()
-    problem = problems[0]
+    problem = problems[5]
     environment = Environment(
         problem=problem,
         root_output=root_output,
         root_path=root_path,
     )
     config_agent = ConfigAgent()
-    evaluator = PatchEvaluator(problem, environment, config_agent)
-    solution_patch = json.dumps({"diff": problem.patch})
-    results = evaluator.evaluate(solution_patch)
-    pprint.pprint(solution_patch)
-    pprint.pprint(results)
     pipeline = ProblemPipeline(
         problem=problem, environment=environment, config_agent=config_agent
     )
