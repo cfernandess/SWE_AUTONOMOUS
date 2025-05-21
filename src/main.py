@@ -8,13 +8,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 from rich.logging import RichHandler
 
-from src.agent.patch_evaluator import PatchEvaluator
-from src.agent.patch_generator import PatchGenerator
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.models.problem import Problem
 from src.utils.io_utils import project_root
 from src.utils.swe_bench_util import load_swe_bench_difficulty
+from src.workflow.patch_evaluator import PatchEvaluator
+from src.workflow.patch_generator import PatchGenerator
 
 logging.basicConfig(
     level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
@@ -46,7 +46,7 @@ def main():
         load_dotenv(os.path.join(root_path, ".env"))
 
     problems = load_swe_bench_difficulty()
-    problems = problems[40:45]
+    problems = problems[68:69]
     for problem in problems:
         environment = Environment(
             problem=problem,
