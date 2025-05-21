@@ -1,7 +1,7 @@
 # trajectory_logger.py
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 
 class TrajectoryLogger:
@@ -10,26 +10,22 @@ class TrajectoryLogger:
 
     def log_step(
         self,
-        *,
         response: str,
         thought: str,
         action: str,
         observation: str,
-        query: List[Dict[str, str]],
-        state: Optional[Dict[str, Any]] = None,
+        query: list,
+        state: dict,
     ):
-        """
-        Log a single trajectory step following SWE-agent format.
-        """
-        step = {
+        entry = {
             "response": response,
             "thought": thought,
             "action": action,
             "observation": observation,
             "query": query,
-            "state": json.dumps(state or {}),
+            "state": json.dumps(state),
         }
-        self.steps.append(step)
+        self.steps.append(entry)
 
     def to_jsonl(self) -> str:
         return "\n".join(json.dumps(step, ensure_ascii=False) for step in self.steps)
