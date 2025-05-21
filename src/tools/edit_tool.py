@@ -1,6 +1,13 @@
+# edit_tool.py
 import os
+from datetime import datetime, UTC
+from time import perf_counter
 
 from smolagents.tools import Tool
+
+from src.config.config_agent import ConfigAgent
+from src.models.environment import Environment
+from src.models.problem import Problem
 
 
 class EditorTool(Tool):
@@ -48,6 +55,19 @@ class EditorTool(Tool):
     }
     output_type = "string"
 
+    def __init__(
+        self,
+        problem: Problem,
+        environment: Environment,
+        config_agent: ConfigAgent,
+    ):
+        super().__init__()
+        self.problem = problem
+        self.environment = environment
+        self.logger = environment.logger
+        self.traj_logger = environment.traj_logger
+        self.config_agent = config_agent
+
     def forward(
         self,
         command: str,
@@ -58,13 +78,31 @@ class EditorTool(Tool):
         insert_line: int = 0,
         view_range: list[int] = None,
     ) -> str:
+        if self.traj_logger:
+            self.traj_logger.log(
+                step_type="tool_call",
+                tool=self.name,
+                content={
+                    "command": command,
+                    "path": path,
+                    "file_text": file_text,
+                    "old_str": old_str,
+                    "new_str": new_str,
+                    "insert_line": insert_line,
+                    "view_range": view_range,
+                },
+                metadata={"timestamp": datetime.now(UTC).isoformat()},
+            )
+
+        start = perf_counter()
+
         try:
             if not os.path.isabs(path):
-                return f"Error: Path must be absolute: {path}"
-            if ".." in os.path.relpath(path, start="/"):
-                return f"Error: Path traversal not allowed: {path}"
+                result = f"Error: Path must be absolute: {path}"
+            elif ".." in os.path.relpath(path, start="/"):
+                result = f"Error: Path traversal not allowed: {path}"
 
-            if command == "view":
+            elif command == "view":
                 if os.path.isdir(path):
                     files = []
                     for root, _, filenames in os.walk(path, topdown=True):
@@ -76,61 +114,87 @@ class EditorTool(Tool):
                             for f in filenames:
                                 if not f.startswith("."):
                                     files.append(f"{subindent}{f}")
-                    return "\n".join(files)
+                    result = "\n".join(files)
                 elif os.path.isfile(path):
                     with open(path, "r") as f:
                         content = f.readlines()
                     if view_range:
-                        start = max(0, view_range[0] - 1)
-                        end = view_range[1] if view_range[1] != -1 else len(content)
-                        content = content[start:end]
-                    return "".join(
+                        start_line = max(0, view_range[0] - 1)
+                        end_line = (
+                            view_range[1] if view_range[1] != -1 else len(content)
+                        )
+                        content = content[start_line:end_line]
+                    result = "".join(
                         [f"{i + 1:4d} {line}" for i, line in enumerate(content)]
                     )
                 else:
-                    return f"Error: {path} is not a file or directory."
+                    result = f"Error: {path} is not a file or directory."
 
             elif command == "create":
                 if os.path.exists(path):
-                    return f"Error: {path} already exists."
-                os.makedirs(os.path.dirname(path), exist_ok=True)
-                with open(path, "w") as f:
-                    f.write(file_text)
-                return f"File created: {path}"
+                    result = f"Error: {path} already exists."
+                else:
+                    os.makedirs(os.path.dirname(path), exist_ok=True)
+                    with open(path, "w") as f:
+                        f.write(file_text)
+                    result = f"File created: {path}"
 
             elif command == "str_replace":
                 if not os.path.isfile(path):
-                    return f"Error: File does not exist: {path}"
-                with open(path, "r") as f:
-                    content = f.read()
-                occurrences = content.count(old_str)
-                if occurrences == 0:
-                    return f"Error: old_str not found in {path}"
-                if occurrences > 1:
-                    return f"Error: old_str appears {occurrences} times, must be unique"
-                with open(path, "w") as f:
-                    f.write(content.replace(old_str, new_str))
-                return f"Successfully replaced content in {path}"
+                    result = f"Error: File does not exist: {path}"
+                else:
+                    with open(path, "r") as f:
+                        content = f.read()
+                    occurrences = content.count(old_str)
+                    if occurrences == 0:
+                        result = f"Error: old_str not found in {path}"
+                    elif occurrences > 1:
+                        result = f"Error: old_str appears {occurrences} times, must be unique"
+                    else:
+                        with open(path, "w") as f:
+                            f.write(content.replace(old_str, new_str))
+                        result = f"Successfully replaced content in {path}"
 
             elif command == "insert":
                 if not os.path.isfile(path):
-                    return f"Error: File does not exist: {path}"
-                try:
-                    insert_line = int(insert_line)
-                except ValueError:
-                    return "Error: insert_line must be an integer"
-                with open(path, "r") as f:
-                    content = f.readlines()
-                if insert_line < 0 or insert_line > len(content):
-                    return f"Error: insert_line {insert_line} out of range"
-                content.insert(insert_line, new_str.rstrip("\n") + "\n")
-                with open(path, "w") as f:
-                    f.writelines(content)
-                return f"Inserted text at line {insert_line} in {path}"
+                    result = f"Error: File does not exist: {path}"
+                else:
+                    try:
+                        insert_line = int(insert_line)
+                    except ValueError:
+                        result = "Error: insert_line must be an integer"
+                    else:
+                        with open(path, "r") as f:
+                            content = f.readlines()
+                        if insert_line < 0 or insert_line > len(content):
+                            result = f"Error: insert_line {insert_line} out of range"
+                        else:
+                            content.insert(insert_line, new_str.rstrip("\n") + "\n")
+                            with open(path, "w") as f:
+                                f.writelines(content)
+                            result = f"Inserted text at line {insert_line} in {path}"
 
             elif command == "undo_edit":
-                return f"Error: Undo functionality not implemented for {path}"
+                result = f"Error: Undo functionality not implemented for {path}"
 
-            return f"Error: Unknown command '{command}'"
+            else:
+                result = f"Error: Unknown command '{command}'"
+
         except Exception as e:
-            return f"Error during '{command}': {str(e)}"
+            result = f"Error during '{command}': {str(e)}"
+
+        if self.traj_logger:
+            self.traj_logger.log(
+                step_type="tool_return",
+                tool=self.name,
+                content=result,
+                metadata={
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "duration_seconds": perf_counter() - start,
+                },
+            )
+
+        return result
+
+
+# EOF

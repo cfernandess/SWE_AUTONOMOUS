@@ -1,3 +1,4 @@
+# test_prompt_template.py
 from pathlib import Path
 
 import pytest
@@ -94,3 +95,6 @@ def test_non_str_data_raises_type_error(
             prompt_args=args,
         )
         prompt.generate()
+
+
+# EOF

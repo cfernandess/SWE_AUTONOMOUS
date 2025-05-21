@@ -1,3 +1,4 @@
+# repo_structure.py
 from pathlib import Path
 from typing import List, Tuple, Optional
 
@@ -75,3 +76,6 @@ class RepoStructure:
             raise
 
         return "\n".join(structure), files
+
+
+# EOF

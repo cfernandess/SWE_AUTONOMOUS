@@ -2,12 +2,13 @@
 import logging
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, PrivateAttr
 from rich.logging import RichHandler
 
 from src.config.yaml_object import YamlObject
 from src.models.problem import Problem
 from src.utils.io_utils import clone_repo
+from src.utils.trajectory_logger import TrajectoryLogger
 
 # Set up global terminal logging with Rich
 logging.basicConfig(
@@ -38,6 +39,7 @@ class Environment(YamlObject):
     problem: Problem = Field(
         ..., description="Problem object that describes the issue to be solved."
     )
+    _traj_logger: TrajectoryLogger = PrivateAttr()
 
     def __init__(self, root_path: Path, root_output: Path, problem: Problem):
         # Set fields manually via __setattr__ to bypass Pydantic validation in __init__
@@ -49,7 +51,7 @@ class Environment(YamlObject):
             output_path=root_output / "outputs" / problem.instance_id,
             repo_path=Path(),  # placeholder, set below
         )
-
+        self._traj_logger = TrajectoryLogger()
         self.output_path.mkdir(parents=True, exist_ok=True)
 
         # Add file logging to output_path
@@ -72,6 +74,10 @@ class Environment(YamlObject):
     @property
     def logger(self) -> logging.Logger:
         return logging.getLogger("rich")
+
+    @property
+    def traj_logger(self) -> TrajectoryLogger:
+        return self._traj_logger
 
 
 # EOF

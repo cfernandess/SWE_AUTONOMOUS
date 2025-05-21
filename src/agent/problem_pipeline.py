@@ -1,3 +1,4 @@
+# problem_pipeline.py
 import json
 import subprocess
 import uuid
@@ -24,17 +25,36 @@ class ProblemPipeline:
         self.environment = environment
         self.config_agent = config_agent
         self.logger = environment.logger
+        self.traj_logger = environment.traj_logger
 
         self.tools = [
-            BashTool(),
-            EditorTool(),
-            RuffLintTool(environment=environment, config_agent=config_agent),
+            BashTool(
+                problem=self.problem,
+                environment=self.environment,
+                config_agent=self.config_agent,
+            ),
+            EditorTool(
+                problem=self.problem,
+                environment=self.environment,
+                config_agent=self.config_agent,
+            ),
+            RuffLintTool(
+                problem=self.problem,
+                environment=self.environment,
+                config_agent=self.config_agent,
+            ),
             SequentialThinkingTool(
-                problem=problem,
-                environment=environment,
-                config_agent=config_agent,
+                problem=self.problem,
+                environment=self.environment,
+                config_agent=self.config_agent,
             ),
         ]
+        self.agent = AutonomousAgent(
+            problem=self.problem,
+            environment=self.environment,
+            config_agent=self.config_agent,
+            tools=self.tools,
+        )
 
     def generate(self, path: Path, generator, desc: str):
         if path.exists():
@@ -54,13 +74,7 @@ class ProblemPipeline:
         )
 
         def run_agent() -> str:
-            agent = AutonomousAgent(
-                problem=self.problem,
-                environment=self.environment,
-                config_agent=self.config_agent,
-                tools=self.tools,
-            )
-            patch_str = agent.generate_patch()
+            patch_str = self.agent.generate_patch()
 
             if not patch_str.strip():
                 raise ValueError("Agent returned an empty patch string.")
@@ -143,6 +157,27 @@ class ProblemPipeline:
         actual_report.replace(final_report_path)
         results = json.loads(final_report_path.read_text())
         self.logger.info(f"[Pipeline] 🗂️  Report moved to {final_report_path}")
+
+        # ⛔ Diagnostics for unresolved instances
+        instance_id = self.problem.instance_id
+        instance_result = results.get("results", {}).get(instance_id, {})
+        status = instance_result.get("status", "UNKNOWN")
+        resolved = status == "RESOLVED"
+
+        if not resolved:
+            self.logger.warning(f"[Pipeline] ❌ Instance NOT resolved: {instance_id}")
+            self.logger.info(f"🔍 Status: {status}")
+            self.logger.info(f"📄 Patch:\n{patch.strip() or '[EMPTY PATCH]'}")
+
+            traj_path = self.environment.output_path / f"{instance_id}.trajectory.jsonl"
+            if traj_path.exists():
+                self.logger.info(f"📍 Trajectory log available at: {traj_path}")
+            else:
+                self.logger.info(f"📍 No trajectory log found at: {traj_path}")
+
+        else:
+            self.logger.info("[Pipeline] ✅ Instance resolved successfully!")
+
         return {"patch": patch, "evaluation": results}
 
 

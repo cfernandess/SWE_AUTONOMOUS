@@ -1,13 +1,17 @@
+# config_agent.py
 # config_autonomous_agent
 import os
 from pathlib import Path
 from typing import Optional
 
+import litellm
 from pydantic import Field, conint
 from smolagents import LiteLLMModel, HfApiModel
 
 from src.config.config_model import ConfigModel
 from src.config.yaml_object import YamlObject
+
+litellm.track_token_usage = True
 
 
 class ConfigAgent(YamlObject):

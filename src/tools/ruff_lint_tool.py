@@ -1,13 +1,17 @@
+# ruff_lint_tool.py
 import re
 import shutil
 import subprocess
 import tempfile
+from datetime import datetime, UTC
 from pathlib import Path
+from time import perf_counter
 
 from smolagents.tools import Tool
 
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
+from src.models.problem import Problem
 from src.utils.io_utils import apply_patch_to_file
 
 
@@ -39,34 +43,64 @@ class RuffLintTool(Tool):
     output_type = "string"
 
     def __init__(
-        self, environment: Environment, config_agent: ConfigAgent, *args, **kwargs
+        self,
+        problem: Problem,
+        environment: Environment,
+        config_agent: ConfigAgent,
     ):
-        super().__init__(*args, **kwargs)
+        super().__init__()
+        self.problem = problem
         self.environment = environment
-        self.config_agent = config_agent
-        self.repo_root = environment.repo_path
         self.logger = environment.logger
+        self.traj_logger = environment.traj_logger
+        self.config_agent = config_agent
         self.ruff_bin = shutil.which("ruff") or "ruff"
+        self.repo_path = self.environment.repo_path
 
     def forward(self, input: list) -> str:
+        if self.traj_logger:
+            self.traj_logger.log(
+                step_type="tool_call",
+                tool=self.name,
+                content=input,
+                metadata={"timestamp": datetime.now(UTC).isoformat()},
+            )
+
+        start = perf_counter()
+
         for solution in input:
             if (
                 not isinstance(solution, dict)
                 or "path" not in solution
                 or "diff" not in solution
             ):
-                return "ERROR: Invalid input format. Each item must contain 'path' and 'diff'."
+                result = "ERROR: Invalid input format. Each item must contain 'path' and 'diff'."
+                break
 
-            result = self._process_single_solution(solution)
-            if result["level"] == "Error":
-                return result["reason"]
+            result_obj = self._process_single_solution(solution)
+            if result_obj["level"] == "Error":
+                result = result_obj["reason"]
+                break
+        else:
+            result = "PASSED"
 
-        return "PASSED"
+        if self.traj_logger:
+            self.traj_logger.log(
+                step_type="tool_return",
+                tool=self.name,
+                content=result,
+                metadata={
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "duration_seconds": perf_counter() - start,
+                },
+            )
+
+        return result
 
     def _process_single_solution(self, solution: dict) -> dict:
         path_str = solution["path"]
         diff = self.fix_hunk_headers(solution["diff"])
-        file_path = self.repo_root / path_str
+        file_path = self.repo_path / path_str
         is_new_file = "@@ -0,0 +" in diff
 
         try:
@@ -136,3 +170,6 @@ class RuffLintTool(Tool):
                 i += 1
 
         return "".join(fixed_lines)
+
+
+# EOF

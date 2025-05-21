@@ -1,7 +1,14 @@
+# bash_tool.py
 import shlex
 import subprocess  # nosec B603
+from datetime import datetime, UTC
+from time import perf_counter
 
 from smolagents.tools import Tool
+
+from src.config.config_agent import ConfigAgent
+from src.models.environment import Environment
+from src.models.problem import Problem
 
 
 class BashTool(Tool):
@@ -21,7 +28,30 @@ class BashTool(Tool):
     }
     output_type = "string"
 
+    def __init__(
+        self,
+        problem: Problem,
+        environment: Environment,
+        config_agent: ConfigAgent,
+    ):
+        super().__init__()
+        self.problem = problem
+        self.environment = environment
+        self.logger = environment.logger
+        self.traj_logger = environment.traj_logger
+        self.config_agent = config_agent
+
     def forward(self, command: str) -> str:
+        if self.traj_logger:
+            self.traj_logger.log(
+                step_type="tool_call",
+                tool=self.name,
+                content={"command": command},
+                metadata={"timestamp": datetime.now(UTC).isoformat()},
+            )
+
+        start = perf_counter()
+
         stdout = ""
         stderr = ""
         error = ""
@@ -37,4 +67,20 @@ class BashTool(Tool):
         except Exception as e:
             error = str(e)
 
-        return f"STDOUT:\n{stdout}\nSTDERR:\n{stderr}\nERROR:\n{error}"
+        output = f"STDOUT:\n{stdout}\nSTDERR:\n{stderr}\nERROR:\n{error}"
+
+        if self.traj_logger:
+            self.traj_logger.log(
+                step_type="tool_return",
+                tool=self.name,
+                content=output,
+                metadata={
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "duration_seconds": perf_counter() - start,
+                },
+            )
+
+        return output
+
+
+# EOF

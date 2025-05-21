@@ -1,3 +1,4 @@
+# test_editor_tool.py
 import tempfile
 from pathlib import Path
 
@@ -112,3 +113,6 @@ def test_view_nonexistent(tool):
 def test_undo_not_implemented(tool, temp_file):
     result = tool.forward(command="undo_edit", path=temp_file)
     assert "not implemented" in result
+
+
+# EOF

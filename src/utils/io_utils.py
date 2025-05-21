@@ -133,41 +133,6 @@ def clone_repo(
     return repo_path
 
 
-def load_file_content(file_path: Path) -> str:
-    """
-    Loads the full content of a file from disk given its absolute path.
-    Args:
-        file_path (str): Absolute path to the file.
-    Returns:
-        str: Entire file content as a single string.
-    """
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return f.read()
-    except Exception as e:
-        print(f"Failed to read file {file_path}: {e}")
-        return ""
-
-
-def read_lines(file_path: str) -> list[str]:
-    """
-    Reads a file and returns all lines exactly as they are, including blank lines and trailing newlines.
-
-    Args:
-        file_path (str): The full path to the file.
-
-    Returns:
-        List[str]: A list of all lines from the file (including blank lines and newlines).
-    """
-    if os.path.exists(file_path):
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                return f.readlines()
-        except Exception as e:
-            print(f"Failed to read file {file_path}: {e}")
-    return ["N/A"]
-
-
 def load_gitignore_spec() -> pathspec.PathSpec:
     root_dir = project_root()
     gitignore_path = Path(root_dir) / ".gitignore"

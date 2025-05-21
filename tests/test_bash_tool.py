@@ -1,3 +1,4 @@
+# test_bash_tool.py
 import pytest
 
 from src.tools.bash_tool import BashTool
@@ -44,3 +45,6 @@ def test_command_exception(tool, monkeypatch):
     assert "STDERR:" in result
     assert "ERROR:" in result
     assert "division by zero" in result
+
+
+# EOF
