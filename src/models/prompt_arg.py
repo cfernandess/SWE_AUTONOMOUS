@@ -23,7 +23,7 @@ class PromptArg(BaseModel):
         1, description="Maximum token percentage allowed for this argument."
     )
     min_token_limit: conint(ge=0) = Field(0, description="Minimum number of tokens.")
-    max_token_limit: conint(le=1_000_000) = Field(
+    max_token_limit: conint(le=100_000) = Field(
         100, description="Maximum number of tokens."
     )
 

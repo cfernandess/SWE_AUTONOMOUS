@@ -8,7 +8,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from rich.logging import RichHandler
 
-from src.agent.problem_pipeline import ProblemPipeline
+from src.agent.patch_evaluator import PatchEvaluator
+from src.agent.patch_generator import PatchGenerator
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.utils.io_utils import project_root
@@ -36,17 +37,21 @@ def main():
         load_dotenv(os.path.join(root_path, ".env"))
 
     problems = load_swe_bench_difficulty()
-    problem = problems[60]
+    problem = problems[55]
     environment = Environment(
         problem=problem,
         root_output=root_output,
         root_path=root_path,
     )
     config_agent = ConfigAgent()
-    pipeline = ProblemPipeline(
+    generator = PatchGenerator(
         problem=problem, environment=environment, config_agent=config_agent
     )
-    pipeline.run()
+    evaluator = PatchEvaluator(
+        problem=problem, environment=environment, config_agent=config_agent
+    )
+    patch = generator.generate_patch()
+    return evaluator.evaluate(patch)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 # test_editor_tool.py
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -9,7 +10,18 @@ from src.tools.edit_tool import EditorTool
 
 @pytest.fixture
 def tool():
-    return EditorTool()
+    mock_problem = MagicMock()
+    mock_environment = MagicMock()
+    mock_environment.logger = MagicMock()
+    mock_environment.traj_logger = MagicMock()
+    mock_environment.repo_path = "/tmp/fake-repo"
+
+    mock_config_agent = MagicMock()
+    return EditorTool(
+        problem=mock_problem,
+        environment=mock_environment,
+        config_agent=mock_config_agent,
+    )
 
 
 @pytest.fixture
