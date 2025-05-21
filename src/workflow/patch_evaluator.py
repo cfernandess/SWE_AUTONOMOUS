@@ -26,10 +26,8 @@ class PatchEvaluator:
 
         # 🔁 Load cached patch if not provided
         if patch is None:
-            patch_path = self.environment.output_path / f"{instance_id}.patch.json"
-            if not patch_path.exists():
-                raise FileNotFoundError(f"No cached patch file at {patch_path}")
-            patch = json.loads(patch_path.read_text())
+            patch_path = self.environment.output_path / f"{instance_id}.patch"
+            patch = patch_path.read_text()
 
         predictions_path = (
             self.environment.output_path / f"{instance_id}.predictions.json"

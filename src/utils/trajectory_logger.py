@@ -1,6 +1,5 @@
 # trajectory_logger.py
 import json
-from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -9,44 +8,36 @@ class TrajectoryLogger:
     def __init__(self):
         self.steps: List[Dict[str, Any]] = []
 
-    def log(
+    def log_step(
         self,
-        step_type: str,
-        content: Any,
-        tool: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        *,
+        response: str,
+        thought: str,
+        action: str,
+        observation: str,
+        query: List[Dict[str, str]],
+        state: Optional[Dict[str, Any]] = None,
     ):
         """
-        Log a step in the agent's trajectory.
+        Log a single trajectory step following SWE-agent format.
         """
-        entry = {
-            "step": len(self.steps) + 1,
-            "type": step_type,
-            "content": content,
-            "timestamp": datetime.now(UTC).isoformat(),
+        step = {
+            "response": response,
+            "thought": thought,
+            "action": action,
+            "observation": observation,
+            "query": query,
+            "state": json.dumps(state or {}),
         }
-        if tool:
-            entry["tool"] = tool
-        if metadata:
-            entry.update(metadata)
-        self.steps.append(entry)
+        self.steps.append(step)
 
     def to_jsonl(self) -> str:
-        """
-        Return the trajectory as a JSONL-formatted string.
-        """
-        return "\n".join(json.dumps(step) for step in self.steps)
+        return "\n".join(json.dumps(step, ensure_ascii=False) for step in self.steps)
 
     def save_jsonl(self, path: Path):
-        """
-        Save the trajectory to a .jsonl file.
-        """
         path.write_text(self.to_jsonl(), encoding="utf-8")
 
     def get(self) -> List[Dict[str, Any]]:
-        """
-        Return the trajectory as a Python list.
-        """
         return self.steps
 
 

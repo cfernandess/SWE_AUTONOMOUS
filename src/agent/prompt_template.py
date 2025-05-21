@@ -50,6 +50,15 @@ class PromptTemplate:
         print(f"[SimplePromptTemplate] Tokens used: {token_count}")
         return prompt
 
+    @staticmethod
+    def get_query(prompt) -> list[dict]:
+        return [
+            {
+                "role": "system",
+                "content": "You are a helpful software engineering assistant.",
+            },
+            {"role": "user", "content": prompt},
+        ]
 
-#  EOF
+
 # EOF

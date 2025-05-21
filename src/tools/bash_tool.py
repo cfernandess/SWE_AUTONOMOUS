@@ -1,7 +1,6 @@
 # bash_tool.py
 import shlex
 import subprocess  # nosec B603
-from datetime import datetime, UTC
 from time import perf_counter
 
 from smolagents.tools import Tool
@@ -42,19 +41,12 @@ class BashTool(Tool):
         self.config_agent = config_agent
 
     def forward(self, command: str) -> str:
-        if self.traj_logger:
-            self.traj_logger.log(
-                step_type="tool_call",
-                tool=self.name,
-                content={"command": command},
-                metadata={"timestamp": datetime.now(UTC).isoformat()},
-            )
-
         start = perf_counter()
-
         stdout = ""
         stderr = ""
         error = ""
+        result = None  # ✅ Safely initialize result
+
         try:
             command_list = shlex.split(command)
             result = subprocess.run(
@@ -70,12 +62,16 @@ class BashTool(Tool):
         output = f"STDOUT:\n{stdout}\nSTDERR:\n{stderr}\nERROR:\n{error}"
 
         if self.traj_logger:
-            self.traj_logger.log(
-                step_type="tool_return",
-                tool=self.name,
-                content=output,
-                metadata={
-                    "timestamp": datetime.now(UTC).isoformat(),
+            self.traj_logger.log_step(
+                response="",
+                thought="Run shell command in isolated environment.",
+                action=f"bash: {command}",
+                observation=output,
+                query=[{"role": "user", "content": command}],
+                state={
+                    "repo_path": str(self.environment.repo_path),
+                    "working_dir": str(self.environment.repo_path),
+                    "exit_code": result.returncode if result else -1,
                     "duration_seconds": perf_counter() - start,
                 },
             )

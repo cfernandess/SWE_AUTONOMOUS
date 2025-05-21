@@ -1,5 +1,4 @@
 # agent.py
-from datetime import datetime, UTC
 from time import perf_counter
 from typing import List, Optional
 
@@ -11,12 +10,9 @@ from src.models.environment import Environment
 from src.models.problem import Problem
 from src.models.prompt_arg import PromptArg
 from src.utils.repo_structure import RepoStructure
-from src.utils.trajectory_logger import TrajectoryLogger
 
 
 class LLMResponseError(Exception):
-    """Custom exception for LLM response errors."""
-
     pass
 
 
@@ -32,11 +28,11 @@ class AutonomousAgent:
         self.environment = environment
         self.config_agent = config_agent
         self.logger = environment.logger
+        self.traj_logger = environment.traj_logger
         self.tools = tools if tools else []
         self.repo_structure, _ = RepoStructure(
             repo_path=self.environment.repo_path, file_ext=[".py"]
         ).generate_structure()
-        self.trajectory_logger = TrajectoryLogger()
 
         args = [
             PromptArg(name="problem_statement", data=problem.problem_statement),
@@ -64,51 +60,52 @@ class AutonomousAgent:
         )
 
     def generate_patch(self) -> str:
-        """
-        Generates a patch for the current problem.
-        Always logs trajectory and saves it to a `.trajectory.jsonl` file.
-        """
         prompt = self.prompt_patch_template.generate()
+        query = self.prompt_patch_template.get_query(prompt)
 
-        self.trajectory_logger.log(
-            step_type="llm_prompt",
-            content=prompt,
-            metadata={
+        self.traj_logger.log_step(
+            response=prompt,
+            thought="Generating patch with unified diff format using LLM.",
+            action="llm(prompt)",
+            observation="Prompt prepared for model call.",
+            state={
+                "repo_path": str(self.environment.repo_path),
                 "model_name": self.config_agent.config_model.model_name,
-                "timestamp": datetime.now(UTC).isoformat(),
             },
+            query=query,  # Optional: fill with message objects if chat format
         )
 
         start = perf_counter()
         patch = self.run_task(prompt)
         duration = perf_counter() - start
 
-        # Safe access with fallback defaults
+        # Token + cost metrics from wrapper
         input_tokens = getattr(self.model_wrapper, "num_input_tokens", 0)
         output_tokens = getattr(self.model_wrapper, "num_output_tokens", 0)
         input_cost = getattr(self.model_wrapper, "input_cost", 0.0)
         output_cost = getattr(self.model_wrapper, "output_cost", 0.0)
 
-        self.trajectory_logger.log(
-            step_type="llm_response",
-            content=patch,
-            metadata={
-                "model_name": self.config_agent.config_model.model_name,
-                "timestamp": datetime.now(UTC).isoformat(),
-                "duration_seconds": duration,
+        self.traj_logger.log_step(
+            response=patch,
+            thought="LLM returned patch. Captured response from agent.",
+            action="ToolCallingAgent.run()",
+            observation="Patch successfully generated.",
+            state={
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "input_cost": input_cost,
                 "output_cost": output_cost,
                 "total_cost": input_cost + output_cost,
+                "duration_seconds": duration,
             },
+            query=query,
         )
 
         trajectory_path = (
             self.environment.output_path
             / f"{self.environment.instance_id}.trajectory.jsonl"
         )
-        self.trajectory_logger.save_jsonl(trajectory_path)
+        self.traj_logger.save_jsonl(trajectory_path)
         self.logger.info(f"[Agent] 🧭 Trajectory log saved to {trajectory_path}")
         self.logger.info(
             f"[Agent] 💰 Cost summary — "
@@ -135,14 +132,11 @@ class AutonomousAgent:
             )
 
         response = self.agent.run(task=task)
-
-        if not response:
-            return ""
-
-        if isinstance(response, dict) and "description" in response:
-            return response["description"].strip()
-
-        return str(response).strip()
+        return (
+            response["description"].strip()
+            if isinstance(response, dict) and "description" in response
+            else str(response).strip()
+        )
 
 
 # EOF

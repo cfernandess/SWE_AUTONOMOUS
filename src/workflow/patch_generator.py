@@ -23,7 +23,6 @@ class PatchGenerator:
         self.environment = environment
         self.config_agent = config_agent
         self.logger = environment.logger
-        self.traj_logger = environment.traj_logger
 
         self.tools = [
             BashTool(problem, environment, config_agent),
@@ -51,8 +50,8 @@ class PatchGenerator:
 
     def generate_patch(self) -> str:
         self.logger.info("[Pipeline] 🧠 Generating single patch candidate...")
-        patch_file = (
-            self.environment.output_path / f"{self.environment.instance_id}.patch.json"
+        patch_path = (
+            self.environment.output_path / f"{self.environment.instance_id}.patch"
         )
 
         def run_agent():
@@ -61,7 +60,14 @@ class PatchGenerator:
                 raise ValueError("Agent returned an empty patch string.")
             return patch_str
 
-        return self.generate(patch_file, run_agent, "single solution patch")
+        if patch_path.exists():
+            self.logger.info(f"[Cache] ✅ Loaded cached patch from {patch_path.name}")
+            return patch_path.read_text()
+
+        patch = run_agent()
+        patch_path.write_text(patch)
+        self.logger.info(f"[Cache] ✅ Saved generated patch to {patch_path.name}")
+        return patch
 
 
 # EOF

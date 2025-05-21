@@ -1,6 +1,5 @@
 # edit_tool.py
 import os
-from datetime import datetime, UTC
 from time import perf_counter
 
 from smolagents.tools import Tool
@@ -78,22 +77,6 @@ class EditorTool(Tool):
         insert_line: int = 0,
         view_range: list[int] = None,
     ) -> str:
-        if self.traj_logger:
-            self.traj_logger.log(
-                step_type="tool_call",
-                tool=self.name,
-                content={
-                    "command": command,
-                    "path": path,
-                    "file_text": file_text,
-                    "old_str": old_str,
-                    "new_str": new_str,
-                    "insert_line": insert_line,
-                    "view_range": view_range,
-                },
-                metadata={"timestamp": datetime.now(UTC).isoformat()},
-            )
-
         start = perf_counter()
 
         try:
@@ -184,12 +167,16 @@ class EditorTool(Tool):
             result = f"Error during '{command}': {str(e)}"
 
         if self.traj_logger:
-            self.traj_logger.log(
-                step_type="tool_return",
-                tool=self.name,
-                content=result,
-                metadata={
-                    "timestamp": datetime.now(UTC).isoformat(),
+            self.traj_logger.log_step(
+                response="",
+                thought=f"Perform '{command}' operation on file system.",
+                action=f"{self.name}: {command}",
+                observation=result,
+                query=[{"role": "user", "content": command}],
+                state={
+                    "repo_path": str(self.environment.repo_path),
+                    "target_path": str(path),
+                    "command": command,
                     "duration_seconds": perf_counter() - start,
                 },
             )

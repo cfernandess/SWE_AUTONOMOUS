@@ -3,7 +3,6 @@ import re
 import shutil
 import subprocess
 import tempfile
-from datetime import datetime, UTC
 from pathlib import Path
 from time import perf_counter
 
@@ -58,14 +57,6 @@ class RuffLintTool(Tool):
         self.repo_path = self.environment.repo_path
 
     def forward(self, input: list) -> str:
-        if self.traj_logger:
-            self.traj_logger.log(
-                step_type="tool_call",
-                tool=self.name,
-                content=input,
-                metadata={"timestamp": datetime.now(UTC).isoformat()},
-            )
-
         start = perf_counter()
 
         for solution in input:
@@ -85,12 +76,16 @@ class RuffLintTool(Tool):
             result = "PASSED"
 
         if self.traj_logger:
-            self.traj_logger.log(
-                step_type="tool_return",
-                tool=self.name,
-                content=result,
-                metadata={
-                    "timestamp": datetime.now(UTC).isoformat(),
+            self.traj_logger.log_step(
+                response="",
+                thought="Run Ruff linter to validate patch formatting and syntax.",
+                action=f"{self.name}: check",
+                observation=result,
+                query=input,
+                state={
+                    "repo_path": str(self.repo_path),
+                    "num_patches": len(input),
+                    "ruff_bin": self.ruff_bin,
                     "duration_seconds": perf_counter() - start,
                 },
             )

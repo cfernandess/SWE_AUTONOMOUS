@@ -1,5 +1,4 @@
 # sequential_thinking_tool.py
-from datetime import datetime, UTC
 from time import perf_counter
 
 from smolagents.tools import Tool
@@ -43,14 +42,6 @@ class SequentialThinkingTool(Tool):
         )
 
     def forward(self, goal: str, problem_statement: str) -> str:
-        if self.traj_logger:
-            self.traj_logger.log(
-                step_type="tool_call",
-                tool=self.name,
-                content={"goal": goal, "problem_statement": problem_statement},
-                metadata={"timestamp": datetime.now(UTC).isoformat()},
-            )
-
         start = perf_counter()
         thoughts = []
 
@@ -61,18 +52,6 @@ class SequentialThinkingTool(Tool):
             step_text = f"Step {step + 1}: {response.strip()}"
             thoughts.append(step_text)
 
-            # Optional: log each thought step as a Chain-of-Thought trace
-            if self.traj_logger:
-                self.traj_logger.log(
-                    step_type="llm_thought",
-                    tool=self.name,
-                    content=step_text,
-                    metadata={
-                        "step_number": step + 1,
-                        "timestamp": datetime.now(UTC).isoformat(),
-                    },
-                )
-
             if "FINAL ANSWER:" in response:
                 break
 
@@ -82,12 +61,24 @@ class SequentialThinkingTool(Tool):
         full_output = "\n".join(thoughts)
 
         if self.traj_logger:
-            self.traj_logger.log(
-                step_type="tool_return",
-                tool=self.name,
-                content=full_output,
-                metadata={
-                    "timestamp": datetime.now(UTC).isoformat(),
+            self.traj_logger.log_step(
+                response="",
+                thought="Begin structured chain-of-thought reasoning to reach FINAL ANSWER.",
+                action=f"{self.name}: structured_thinking",
+                observation=full_output,
+                query=[
+                    {
+                        "role": "system",
+                        "content": "You are an autonomous agent solving a software issue using structured thinking.",
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Problem:\n{problem_statement}\nGoal:\n{goal}",
+                    },
+                ],
+                state={
+                    "repo_path": str(self.environment.repo_path),
+                    "max_steps": self.max_steps,
                     "duration_seconds": perf_counter() - start,
                 },
             )
