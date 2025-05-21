@@ -58,13 +58,6 @@ class AutonomousAgent:
             path=environment.root_path / config_agent.patch_prompt_path,
             prompt_args=args,
         )
-        self.prompt_test_patch_template = PromptTemplate(
-            problem=problem,
-            environment=environment,
-            config_agent=config_agent,
-            path=environment.root_path / config_agent.test_patch_prompt_path,
-            prompt_args=args,
-        )
 
         if self.config_agent.mock_mode:
             self.agent = None
@@ -86,14 +79,6 @@ class AutonomousAgent:
         Can be called multiple times to sample variations.
         """
         prompt = self.prompt_patch_template
-        return self.run_task(prompt.generate())
-
-    def generate_patch_test(self) -> str:
-        """
-        Generates a patch test that ideally reproduces the failure.
-        Can be reused to validate one or more patches.
-        """
-        prompt = self.prompt_test_patch_template
         return self.run_task(prompt.generate())
 
     def run_task(self, task: str) -> str:

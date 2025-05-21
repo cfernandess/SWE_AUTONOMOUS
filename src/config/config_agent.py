@@ -26,8 +26,8 @@ class ConfigAgent(YamlObject):
         True, description="Load results from cache instead of recomputing."
     )
     save_cache: bool = Field(True, description="Save results to cache after computing.")
-    agent_max_steps: conint(gt=0, le=5) = Field(
-        5,
+    agent_max_steps: conint(gt=0, le=10) = Field(
+        7,
         description="Number of agent max retries. Must be >0.",
     )
     mock_mode: Optional[bool] = Field(
@@ -40,14 +40,6 @@ class ConfigAgent(YamlObject):
     )
     num_patches: conint(gt=0, le=5) = Field(
         1,
-        description="Number of agent max retries. Must be >0.",
-    )
-    test_patch_prompt_path: Path = Field(
-        Path("src/agent/agent_test_patch.prompt"),
-        description="Relative path to the main test action prompt file.",
-    )
-    num_tests: conint(ge=0, le=5) = Field(
-        0,
         description="Number of agent max retries. Must be >0.",
     )
 
@@ -67,14 +59,14 @@ class ConfigAgent(YamlObject):
             )
         elif config_model.vendor_name.startswith("openai"):
             return LiteLLMModel(
-                model_id=config_model.lite_llm_name,
+                model_id=config_model.model_name,
                 api_base="https://api.openai.com/v1",
                 api_key=os.getenv("OPENAI_API_KEY", ""),
                 **common_kwargs,
             )
         elif config_model.vendor_name.startswith("anthropic"):
             return LiteLLMModel(
-                model_id=config_model.lite_llm_name,
+                model_id=config_model.model_name,
                 api_key=os.getenv("ANTHROPIC_API_KEY", ""),
                 custom_llm_provider="anthropic",
                 **common_kwargs,

@@ -1,8 +1,6 @@
 # config_model.py
-from functools import cached_property
 from typing import Literal, Optional, List
 
-import litellm
 from pydantic import Field, conint, confloat
 
 from src.config.yaml_object import YamlObject
@@ -39,26 +37,6 @@ class ConfigModel(YamlObject):
         default=None,
         description="Optional seed for reproducible sampling (if supported).",
     )
-
-    @property
-    def lite_llm_name(self) -> str:
-        return self.model_name
-
-    @cached_property
-    def model_info(self) -> dict:
-        try:
-            return litellm.get_model_info(
-                model=self.model_name, custom_llm_provider=self.vendor_name
-            )
-        except Exception:
-            return {}
-
-    @property
-    def max_tokens(self) -> int:
-        """
-        Maximum input context tokens from models metadata (LiteLLM).
-        """
-        return self.model_info.get("max_tokens", 10_000)
 
 
 # EOF

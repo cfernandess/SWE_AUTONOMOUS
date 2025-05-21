@@ -53,19 +53,24 @@ class ProblemPipeline:
             self.environment.output_path / f"{self.environment.instance_id}.patch.json"
         )
 
-        def run_agent():
+        def run_agent() -> str:
             agent = AutonomousAgent(
                 problem=self.problem,
                 environment=self.environment,
                 config_agent=self.config_agent,
                 tools=self.tools,
             )
-            return agent.generate_patch()
+            patch_str = agent.generate_patch()
+
+            if not patch_str.strip():
+                raise ValueError("Agent returned an empty patch string.")
+
+            return patch_str
 
         patch = self.generate(patch_file, run_agent, "single solution patch")
         return patch
 
-    def run(self):
+    def run(self) -> dict:
         self.logger.info("[Pipeline] 🚀 Starting single-patch pipeline...")
 
         patch = self.generate_patch()
@@ -82,7 +87,7 @@ class ProblemPipeline:
                 [
                     {
                         "instance_id": self.problem.instance_id,
-                        "model_patch": self.problem.patch,
+                        "model_patch": patch,
                         "model_name_or_path": self.config_agent.config_model.model_name,
                     }
                 ],
@@ -127,8 +132,7 @@ class ProblemPipeline:
 
         self.logger.info("[Pipeline] ✅ Evaluation completed.")
 
-        model_name = self.config_agent.config_model.model_name.split("/")[-1]
-        expected_prefix = f"{model_name}.{run_id}"
+        expected_prefix = f"{self.config_agent.config_model.model_name}.{run_id}"
         report_candidates = list(Path(swebench_path).glob(f"{expected_prefix}.json"))
         if not report_candidates:
             raise FileNotFoundError(

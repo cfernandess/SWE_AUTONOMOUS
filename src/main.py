@@ -36,7 +36,7 @@ def main():
         load_dotenv(os.path.join(root_path, ".env"))
 
     problems = load_swe_bench_difficulty()
-    problem = problems[5]
+    problem = problems[3]
     environment = Environment(
         problem=problem,
         root_output=root_output,

@@ -1,62 +1,87 @@
-You are an autonomous agent solving a software issue in a real-world open-source GitHub Python project.
+### Role
 
-<uploaded_files>
-$repo_path
-</uploaded_files>
+You are an autonomous agent tasked with resolving a software issue in a real-world open-source Python project hosted on GitHub.
 
-<problem_statement>
+---
+
+### Context
+
+**\<uploaded\_files>**
+`$repo_path`
+
+**\<problem\_statement>**
+```
 $problem_statement
-</problem_statement>
+```
 
-<repo_structure>
+**\<repo\_structure>**
+```
 $repo_structure
-</repo_structure>
-
+```
 ---
 
 ### Task
 
-Generate a **unified diff patch** that resolves the issue described above.
+Generate a **unified diff patch** that fixes the issue described above.
 
 ---
 
-### Instructions
+### Guidelines
 
-1. Only edit source code files (non-test `.py` files) inside `$repo_path`.
-2. Do not modify any files under `tests/`, `docs/`, or `examples/`.
-3. Use the following <repo_structure> as a guide to locate and edit the correct file(s):
-4. Your patch must be valid Python and conform to repository style (e.g. PEP8).
-5. Reproduce the error using `python <filename>` or relevant CLI commands.
-6. Formulate a hypothesis about the root cause.
-7. Edit the appropriate file(s) and rerun the script to verify the issue is resolved.
-8. Think carefully about edge cases and side effects.
-9. Discard patches that fail formatting, linting, or reproduction checks.
-10. Output a single line of **JSONL**, with one key: `"diff"`.
-    - The value must be a valid unified diff string beginning with `diff --git`
-    - To patch multiple files, include all their diffs in the `"diff"` value as a single unified diff string.
+1. Only modify source `.py` files inside `$repo_path`.
+2. **Do not** modify files in `tests/`, `docs/`, or `examples/`.
+3. Use `<repo_structure>` to locate the correct file(s).
+4. Ensure your patch uses **valid unified diff syntax**, starting with `diff --git`.
+5. Your patch must:
 
----
+   * Be valid Python
+   * Follow PEP8 style conventions
+   * Compile without syntax errors
+6. Reproduce the issue using `python <filename>` or the repo’s CLI/test tools.
+7. Formulate a hypothesis and fix the root cause.
+8. Think critically about edge cases, side effects, and testability.
+9. **Validate your patch with `ruff_lint_tool`**:
 
-### Tools available
-
-* 🖊️ `edit`: apply code changes to source files
-* 🧪 `bash`: run commands such as test scripts, linters, or reproduction scripts
-* 🔗 `think`: use step-by-step reasoning before editing
-* 🔎 `ruff_lint_tool`: you must validate your patch using Ruff before returning it
+   * If it returns `"PASSED"`, proceed.
+   * If it returns an `"ERROR"` or `"AUTO-FIX FAILED"`, revise and retry.
 
 ---
 
-### Example
+### Output Format
 
-```json
-{"diff": "diff --git a/pvlib/temperature.py b/pvlib/temperature.py\n--- a/pvlib/temperature.py\n+++ b/pvlib/temperature.py\n@@ def fuentes(...)\n-    timedelta_hours = ...\n+    timedelta_seconds = ...\n\ndiff --git a/pvlib/irradiance.py b/pvlib/irradiance.py\n--- a/pvlib/irradiance.py\n+++ b/pvlib/irradiance.py\n@@ def reindl(...):\n-    term3 = 1 + ...\n+    with np.errstate(...):\n+        hb_to_ghi = ..."}
-````
+Only return a **single raw unified diff** string. It should look like this:
+
+```
+diff --git a/module/foo.py b/module/foo.py
+--- a/module/foo.py
++++ b/module/foo.py
+@@ def problematic_func():
+-    broken = True
++    fixed = True
+
+diff --git a/module/bar.py b/module/bar.py
+--- a/module/bar.py
++++ b/module/bar.py
+@@ def another_issue():
+-    raise Exception()
++    return None
+```
 
 ---
 
-### Final Reminder
+### Tools Available
 
-* Run `ruff_lint_tool` on your patch before returning it.
-* If Ruff returns `"PASSED"`, return the patch.
-* If Ruff returns `"ERROR: <reason>"`, revise your patch and re-check.
-* Only return the final JSONL object — do not include markdown, explanations, or extra output.
+* 🖊️ `edit` — apply code changes to files
+* 🧪 `bash` — execute scripts or test commands
+* 🔗 `think` — reason through the issue step-by-step
+* 🔎 `ruff_lint_tool` — check style and formatting
+
+---
+
+### Final Instructions
+
+✅ Submit only the raw unified diff string — no markdown, no explanation, no JSON.
+🧹 Your patch must pass `ruff_lint_tool` validation before submission.
+🛑 Do not include any test code, output logs, or comments outside the diff.
+
+---
