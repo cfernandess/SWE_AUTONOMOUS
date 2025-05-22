@@ -30,6 +30,7 @@ class AutonomousAgent:
         self.logger = environment.logger
         self.traj_logger = environment.traj_logger
         self.tools = tools if tools else []
+
         self.repo_structure, _ = RepoStructure(
             repo_path=self.environment.repo_path, file_ext=[".py"]
         ).generate_structure()
@@ -52,7 +53,9 @@ class AutonomousAgent:
             self.agent = None
             return
 
-        self.model_wrapper = config_agent.get_llm_wrapper(config_agent.config_model)
+        self.model_wrapper = config_agent.get_llm_wrapper(
+            config_model=config_agent.config_model
+        )
         self.agent = ToolCallingAgent(
             tools=self.tools,
             model=self.model_wrapper,
@@ -72,18 +75,12 @@ class AutonomousAgent:
                 "repo_path": str(self.environment.repo_path),
                 "model_name": self.config_agent.config_model.model_name,
             },
-            query=query,  # Optional: fill with message objects if chat format
+            query=query,
         )
 
         start = perf_counter()
         patch = self.run_task(prompt)
         duration = perf_counter() - start
-
-        # Token + cost metrics from wrapper
-        input_tokens = getattr(self.model_wrapper, "num_input_tokens", 0)
-        output_tokens = getattr(self.model_wrapper, "num_output_tokens", 0)
-        input_cost = getattr(self.model_wrapper, "input_cost", 0.0)
-        output_cost = getattr(self.model_wrapper, "output_cost", 0.0)
 
         self.traj_logger.log_step(
             response=patch,
@@ -91,11 +88,6 @@ class AutonomousAgent:
             action="ToolCallingAgent.run()",
             observation="Patch successfully generated.",
             state={
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "input_cost": input_cost,
-                "output_cost": output_cost,
-                "total_cost": input_cost + output_cost,
                 "duration_seconds": duration,
             },
             query=query,
@@ -107,18 +99,8 @@ class AutonomousAgent:
         )
         self.traj_logger.save_jsonl(trajectory_path)
         self.logger.info(f"[Agent] 🧭 Trajectory log saved to {trajectory_path}")
-        self.logger.info(
-            f"[Agent] 💰 Cost summary — "
-            f"input_tokens: {input_tokens:,}, "
-            f"output_tokens: {output_tokens:,}, "
-            f"total_cost: ${input_cost + output_cost:.6f}"
-        )
-        print(
-            f"[Agent] 💰 Cost summary — "
-            f"input_tokens: {input_tokens:,}, "
-            f"output_tokens: {output_tokens:,}, "
-            f"total_cost: ${input_cost + output_cost:.6f}"
-        )
+        self.logger.info(f"[Agent] ✅ Patch generated in {duration:.2f} seconds")
+        print(f"[Agent] ✅ Patch generated in {duration:.2f} seconds")
 
         return patch
 

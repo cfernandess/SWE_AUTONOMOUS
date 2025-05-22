@@ -1,4 +1,3 @@
-# patch_generator.py
 import json
 from pathlib import Path
 
@@ -58,6 +57,17 @@ class PatchGenerator:
             patch_str = self.agent.generate_patch()
             if not patch_str.strip():
                 raise ValueError("Agent returned an empty patch string.")
+
+            # ✅ Still record a trajectory step (without cost/token metadata)
+            self.environment.traj_logger.log_step(
+                response=patch_str,
+                thought="Final patch generated and cached.",
+                action="agent.generate_patch()",
+                observation="Patch candidate successfully produced.",
+                query=[],  # No user prompt used at this level
+                state={},
+            )
+
             return patch_str
 
         if patch_path.exists():
