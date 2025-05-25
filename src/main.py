@@ -29,8 +29,17 @@ def run(problem: Problem, environment: Environment, config_agent: ConfigAgent):
     evaluator = PatchEvaluator(
         problem=problem, environment=environment, config_agent=config_agent
     )
-    generator.generate_patch()
-    evaluator.evaluate()
+    patch = generator.generate_patch()
+    evaluator.evaluate(patch)
+
+
+def run_validation(
+    problem: Problem, environment: Environment, config_agent: ConfigAgent
+):
+    evaluator = PatchEvaluator(
+        problem=problem, environment=environment, config_agent=config_agent
+    )
+    evaluator.evaluate(problem.patch)
 
 
 def main(problems: List[Problem], root_output: Path, root_path: Path):
@@ -58,7 +67,7 @@ if __name__ == "__main__":
         if args.local:
             load_dotenv(os.path.join(root_path, ".env"))
         problems = load_swe_bench_difficulty()
-        problems = problems[75:76]
+        problems = problems[2:4]
         main(problems=problems, root_output=root_output, root_path=root_path)
     except Exception as e:
         logging.getLogger("rich").exception(f"[Agent] ❌ Unhandled error: {e}")

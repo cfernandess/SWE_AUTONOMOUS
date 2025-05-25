@@ -1,4 +1,3 @@
-# config_agent.py
 # config_autonomous_agent
 import os
 from pathlib import Path

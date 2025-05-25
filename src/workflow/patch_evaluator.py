@@ -22,32 +22,34 @@ class PatchEvaluator:
         self.logger = environment.logger
 
     def evaluate(self, patch: Optional[str] = None) -> dict:
+        patch = self.normalize_patch(patch)
         instance_id = self.problem.instance_id
+        model_name = self.config_agent.config_model.model_name
+        output_path = self.environment.output_path
+        swebench_path = self.environment.swebench_path
 
-        # 🔁 Load cached patch if not provided
+        # Load patch from cache if not provided
         if patch is None:
-            patch_path = self.environment.output_path / f"{instance_id}.patch"
-            patch = patch_path.read_text()
+            patch_file = output_path / f"{instance_id}.patch"
+            patch = patch_file.read_text()
 
-        predictions_path = (
-            self.environment.output_path / f"{instance_id}.predictions.json"
-        )
-
+        # Write predictions file
+        predictions_path = output_path / f"{instance_id}.predictions.json"
         predictions_path.write_text(
             json.dumps(
                 [
                     {
                         "instance_id": instance_id,
                         "model_patch": patch,
-                        "model_name_or_path": self.config_agent.config_model.model_name,
+                        "model_name_or_path": model_name,
                     }
                 ],
                 indent=2,
             )
         )
 
+        # Run evaluation
         run_id = f"agent-eval-{uuid.uuid4().hex[:8]}"
-        swebench_path = self.environment.swebench_path
         self.logger.info(f"[Evaluator] 📊 Running SWE-bench (run_id={run_id})")
 
         try:
@@ -78,38 +80,48 @@ class PatchEvaluator:
             self.logger.error(f"[Evaluator] ❌ SWE-bench failed:\n{e}")
             raise
 
-        report_name = f"{self.config_agent.config_model.model_name}.{run_id}.json"
-        actual_report = swebench_path / report_name
-        final_report_path = self.environment.output_path / report_name
+        # Read summary report
+        report_name = f"{model_name}.{run_id}.json"
+        report_path = swebench_path / report_name
+        if not report_path.exists():
+            raise FileNotFoundError(f"No SWE-bench summary report found: {report_path}")
 
-        if not actual_report.exists():
-            raise FileNotFoundError(f"No SWE-bench report found: {actual_report}")
+        summary = json.loads(report_path.read_text())
+        self.logger.info(f"[Evaluator] 📁 Summary report saved to {report_path}")
 
-        actual_report.replace(final_report_path)
-        results = json.loads(final_report_path.read_text())
-        self.logger.info(f"[Evaluator] 📁 Report saved to {final_report_path}")
+        # Print status using summary
+        self._print_summary_diagnostics(summary, patch)
 
-        self._print_diagnostics(results, patch)
-        return {"patch": patch, "evaluation": results}
+        return {"patch": patch, "evaluation": summary}
 
-    def _print_diagnostics(self, results: dict, patch: str):
+    def normalize_patch(self, patch: str) -> str:
+        return patch if patch.endswith("\n") else patch + "\n"
+
+    def _print_summary_diagnostics(self, summary: dict, patch: str):
         instance_id = self.problem.instance_id
-        result = results.get("results", {}).get(instance_id, {})
-        status = result.get("status", "UNKNOWN")
-        resolved = status == "RESOLVED"
 
-        if resolved:
-            self.logger.info("[Evaluator] ✅ Instance resolved successfully!")
+        if instance_id in summary.get("resolved_ids", []):
+            self.logger.info(
+                f"[Evaluator] ✅ Instance {instance_id} resolved successfully!"
+            )
+            status = "RESOLVED"
+        elif instance_id in summary.get("unresolved_ids", []):
+            self.logger.warning(f"[Evaluator] ❌ Instance {instance_id} NOT resolved")
+            status = "UNRESOLVED"
         else:
-            self.logger.warning(f"[Evaluator] ❌ Instance NOT resolved: {instance_id}")
-            self.logger.info(f"🔍 Status: {status}")
-            self.logger.info(f"📄 Patch:\n{patch.strip() or '[EMPTY PATCH]'}")
+            self.logger.warning(
+                f"[Evaluator] ⚠️ No result entry found for: {instance_id}"
+            )
+            status = "UNKNOWN"
 
-            traj_path = self.environment.output_path / f"{instance_id}.trajectory.jsonl"
-            if traj_path.exists():
-                self.logger.info(f"📍 Trajectory log available at: {traj_path}")
-            else:
-                self.logger.info(f"📍 No trajectory log found at: {traj_path}")
+        self.logger.info(f"🔍 Status: {status}")
+        self.logger.info(f"📄 Patch:\n{patch.strip() or '[EMPTY PATCH]'}")
+
+        traj_path = self.environment.output_path / f"{instance_id}.trajectory.jsonl"
+        if traj_path.exists():
+            self.logger.info(f"📍 Trajectory log available at: {traj_path}")
+        else:
+            self.logger.info(f"📍 No trajectory log found for: {instance_id}")
 
 
 # EOF

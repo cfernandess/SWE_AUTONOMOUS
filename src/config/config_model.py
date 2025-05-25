@@ -15,7 +15,7 @@ class ConfigModel(YamlObject):
     """
 
     model_name: str = Field(
-        "gpt-4o", description="Name of the LLM model (e.g., gpt-4o)."
+        "gpt-4.1", description="Name of the LLM model (e.g., gpt-4o)."
     )
     vendor_name: Literal["openai", "anthropic", "cohere"] = Field(
         "openai", description="Vendor of the LLM model."

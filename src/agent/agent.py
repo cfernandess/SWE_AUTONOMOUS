@@ -9,7 +9,6 @@ from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.models.problem import Problem
 from src.models.prompt_arg import PromptArg
-from src.utils.repo_structure import RepoStructure
 
 
 class LLMResponseError(Exception):
@@ -30,15 +29,9 @@ class AutonomousAgent:
         self.logger = environment.logger
         self.traj_logger = environment.traj_logger
         self.tools = tools if tools else []
-
-        self.repo_structure, _ = RepoStructure(
-            repo_path=self.environment.repo_path, file_ext=[".py"]
-        ).generate_structure()
-
         args = [
             PromptArg(name="problem_statement", data=problem.problem_statement),
             PromptArg(name="repo_path", data=str(environment.repo_path)),
-            PromptArg(name="repo_structure", data=self.repo_structure),
         ]
 
         self.prompt_patch_template = PromptTemplate(
