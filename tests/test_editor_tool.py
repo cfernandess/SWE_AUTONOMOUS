@@ -1,11 +1,19 @@
 # test_editor_tool.py
-import tempfile
+import shutil
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 from src.tools.edit_tool import EditorTool
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_fake_repo_root():
+    repo_root = Path("/tmp/fake-repo")
+    repo_root.mkdir(parents=True, exist_ok=True)
+    yield
+    shutil.rmtree(repo_root, ignore_errors=True)
 
 
 @pytest.fixture
@@ -26,22 +34,24 @@ def tool():
 
 @pytest.fixture
 def temp_file():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        path = Path(tmpdir) / "file.txt"
-        path.write_text("line1\nline2\nline3\n")
-        yield str(path)
+    repo_root = Path("/tmp/fake-repo")
+    path = repo_root / "file.txt"
+    path.write_text("line1\nline2\nline3\n")
+    yield str(path)
+    path.unlink(missing_ok=True)
 
 
 def test_create_file(tool):
-    with tempfile.TemporaryDirectory() as tmpdir:
-        new_file = Path(tmpdir) / "new.txt"
-        result = tool.forward(
-            command="create",
-            path=str(new_file),
-            file_text="hello\nworld",
-        )
-        assert new_file.exists()
-        assert "File created" in result
+    path = Path("/tmp/fake-repo/new.txt")
+    if path.exists():
+        path.unlink()
+    result = tool.forward(
+        command="create",
+        path=str(path),
+        file_text="hello\nworld",
+    )
+    assert path.exists()
+    assert "File created" in result
 
 
 def test_view_file_full(tool, temp_file):
@@ -82,16 +92,16 @@ def test_str_replace_fail_not_found(tool, temp_file):
 
 
 def test_str_replace_fail_multiple(tool):
-    with tempfile.TemporaryDirectory() as tmpdir:
-        path = Path(tmpdir) / "dupe.txt"
-        path.write_text("repeat\nrepeat\n")
-        result = tool.forward(
-            command="str_replace",
-            path=str(path),
-            old_str="repeat",
-            new_str="once",
-        )
-        assert "must be unique" in result
+    path = Path("/tmp/fake-repo/dupe.txt")
+    path.write_text("repeat\nrepeat\n")
+    result = tool.forward(
+        command="str_replace",
+        path=str(path),
+        old_str="repeat",
+        new_str="once",
+    )
+    assert "must be unique" in result
+    path.unlink(missing_ok=True)
 
 
 def test_insert_success(tool, temp_file):
@@ -118,7 +128,8 @@ def test_insert_out_of_range(tool, temp_file):
 
 
 def test_view_nonexistent(tool):
-    result = tool.forward(command="view", path="/nonexistent/file.txt")
+    path = "/tmp/fake-repo/nonexistent.txt"
+    result = tool.forward(command="view", path=path)
     assert "is not a file or directory" in result
 
 

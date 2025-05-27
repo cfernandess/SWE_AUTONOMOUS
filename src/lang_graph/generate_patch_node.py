@@ -1,7 +1,8 @@
 # generate_patch_node.py
 from langchain_core.runnables import RunnableLambda
-from src.workflow.patch_generator import PatchGenerator
+
 from src.lang_graph.patch_state import PatchState
+from src.workflow.patch_generator import PatchGenerator
 
 
 def make_generate_patch_node(generator: PatchGenerator):

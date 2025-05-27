@@ -38,7 +38,7 @@ class ConfigAgent(YamlObject):
         description="If True, disables actual LLM calls and returns mocked responses (for testing).",
     )
     patch_prompt_path: Path = Field(
-        Path("src/agent/agent_patch_gpt.prompt"),
+        Path("src/agent/agent_patch_claude.prompt"),
         description="Relative path to the main action prompt file.",
     )
     num_patches: conint(gt=0, le=5) = Field(

@@ -2,7 +2,9 @@
 import shlex
 import subprocess  # nosec B603
 from time import perf_counter
+
 from smolagents.tools import Tool
+
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.models.problem import Problem

@@ -15,10 +15,10 @@ class ConfigModel(YamlObject):
     """
 
     model_name: str = Field(
-        "gpt-4.1", description="Name of the LLM model (e.g., gpt-4o)."
+        "claude-3-opus-20240229", description="Name of the LLM model (e.g., gpt-4o)."
     )
     vendor_name: Literal["openai", "anthropic", "cohere"] = Field(
-        "openai", description="Vendor of the LLM model."
+        "anthropic", description="Vendor of the LLM model."
     )
     generation_tokens: conint(gt=0, le=10_000) = Field(
         5_000, description="Maximum tokens to generate (must be > 0)."

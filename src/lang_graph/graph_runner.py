@@ -3,20 +3,22 @@ import argparse
 import os
 import tempfile
 from pathlib import Path
+
 from dotenv import load_dotenv
-from langgraph.graph import StateGraph, START, END
 from langchain_core.tracers.context import tracing_v2_enabled
-from src.lang_graph.patch_state import PatchState
-from src.models.problem import Problem
-from src.models.environment import Environment
+from langgraph.graph import StateGraph, START, END
+
 from src.config.config_agent import ConfigAgent
+from src.lang_graph.evaluate_patch_node import make_evaluate_patch_node
+from src.lang_graph.generate_patch_node import make_generate_patch_node
+from src.lang_graph.graph_nodes import route_from_validation
+from src.lang_graph.patch_state import PatchState
+from src.lang_graph.validate_patch_node import make_validate_patch_node
+from src.models.environment import Environment
+from src.models.problem import Problem
 from src.utils.io_utils import project_root
 from src.utils.swe_bench_util import load_swe_bench_difficulty
-from src.lang_graph.graph_nodes import route_from_validation
 from src.workflow.patch_generator import PatchGenerator
-from src.lang_graph.generate_patch_node import make_generate_patch_node
-from src.lang_graph.validate_patch_node import make_validate_patch_node
-from src.lang_graph.evaluate_patch_node import make_evaluate_patch_node
 
 
 def build_patch_graph(
@@ -66,7 +68,7 @@ def run_graph():
         load_dotenv(os.path.join(root_path, ".env"))
 
     problems = load_swe_bench_difficulty()
-    problem = problems[22]
+    problem = problems[30]
     environment = Environment(
         problem=problem, root_output=root_output, root_path=root_path
     )

@@ -48,11 +48,22 @@ class SequentialThinkingTool(Tool):
         for step in range(self.max_steps):
             scratchpad = "\n".join(thoughts)
             prompt = self._build_prompt(goal, problem_statement, scratchpad)
-            response = self.model(prompt)
-            step_text = f"Step {step + 1}: {response.strip()}"
+
+            response = self.model(
+                [
+                    {
+                        "role": "system",
+                        "content": "You are an autonomous agent solving a software issue using structured thinking.",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
+
+            response_text = response.content  # ✅ Extract message content
+            step_text = f"Step {step + 1}: {response_text.strip()}"
             thoughts.append(step_text)
 
-            if "FINAL ANSWER:" in response:
+            if "FINAL ANSWER:" in response_text:  # ✅ Fixed condition
                 break
 
         if "FINAL ANSWER:" not in thoughts[-1]:

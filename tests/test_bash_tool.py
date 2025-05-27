@@ -8,11 +8,15 @@ from src.tools.bash_tool import BashTool
 
 @pytest.fixture
 def tool():
+    import os
+
     mock_problem = MagicMock()
     mock_environment = MagicMock()
     mock_environment.logger = MagicMock()
     mock_environment.traj_logger = MagicMock()
     mock_environment.repo_path = "/tmp/fake-repo"
+
+    os.makedirs(mock_environment.repo_path, exist_ok=True)
 
     mock_config_agent = MagicMock()
     return BashTool(
