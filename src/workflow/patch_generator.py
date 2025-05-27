@@ -7,7 +7,7 @@ from src.models.environment import Environment
 from src.models.problem import Problem
 from src.tools.bash_tool import BashTool
 from src.tools.edit_tool import EditorTool
-from src.tools.ruff_lint_tool import RuffLintTool
+from src.tools.patch_validator_tool import PatchValidatorTool
 from src.tools.sequential_thinking_tool import SequentialThinkingTool
 
 
@@ -26,7 +26,7 @@ class PatchGenerator:
         self.tools = [
             BashTool(problem, environment, config_agent),
             EditorTool(problem, environment, config_agent),
-            RuffLintTool(problem, environment, config_agent),
+            PatchValidatorTool(problem, environment, config_agent),
             SequentialThinkingTool(problem, environment, config_agent),
         ]
         self.agent = AutonomousAgent(

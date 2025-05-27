@@ -1,56 +1,61 @@
-# validate_patch_node.py (LangSmith-compatible)
-import re
-
+# validate_patch_node.py
 from langchain_core.runnables import RunnableLambda
 
 from src.lang_graph.patch_state import PatchState
-from src.tools.ruff_lint_tool import RuffLintTool
+from src.tools.patch_validator_tool import PatchValidatorTool
 
 
 def make_validate_patch_node(problem, environment, config_agent, max_retries: int = 3):
-    tool_runner = RuffLintTool(problem, environment, config_agent)
+    tool_runner = PatchValidatorTool(problem, environment, config_agent)
 
     def validate_patch(state: PatchState) -> PatchState:
         patch = state.get("patch", "")
         attempts = state.get("attempts", 0)
 
         if attempts >= max_retries:
-            return {**state, "lint_result": "SKIPPED", "lint_diff": patch}
+            return {
+                **state,
+                "validation_result": "ERROR",
+                "validation_err_msg": "Maximum validation attempts reached",
+            }
 
-        def _extract_chunks(patch: str):
-            parts = re.split(r"^diff --git a/(.+?) b/\1\n", patch, flags=re.MULTILINE)
-            return [
-                {
-                    "path": parts[i],
-                    "diff": f"diff --git a/{parts[i]} b/{parts[i]}\n{parts[i+1]}",
-                }
-                for i in range(1, len(parts), 2)
-            ]
+        result = tool_runner.forward(patch)
 
-        def _has_valid_hunk(diff: str):
-            return re.search(r"^@@ -\d+,\d+ \+\d+,\d+ @@", diff, re.MULTILINE)
+        if result.startswith("'''\nPASSED:\n\n"):
+            cleaned_patch = result.removeprefix("'''\nPASSED:\n\n").removesuffix(
+                "\n'''"
+            )
+            return {
+                **state,
+                "patch": cleaned_patch,
+                "validation_result": "PASSED",
+                "validation_err_msg": "",
+            }
+        elif result.startswith("'''\nERROR:\n\n"):
+            err_msg = (
+                result.removeprefix("'''\nERROR:\n\n").removesuffix("\n'''").strip()
+            )
+            return {
+                **state,
+                "validation_result": "ERROR",
+                "validation_err_msg": err_msg,
+            }
 
-        try:
-            chunks = _extract_chunks(patch)
-        except Exception:
-            return {**state, "lint_result": "ERROR", "lint_diff": ""}
-
-        for chunk in chunks:
-            if not _has_valid_hunk(chunk["diff"]):
-                return {**state, "lint_result": "ERROR", "lint_diff": ""}
-            result = tool_runner.forward([chunk])
-            if result.startswith("ERROR"):
-                return {**state, "lint_result": "ERROR", "lint_diff": ""}
-
-        return {**state, "lint_result": "PASSED", "lint_diff": patch}
+        return {
+            **state,
+            "validation_result": "ERROR",
+            "validation_err_msg": "Unknown format from validator tool",
+        }
 
     return RunnableLambda(validate_patch).with_config({"run_name": "validate_patch"})
 
 
 def route_from_validation(state: PatchState) -> str:
-    if state.get("lint_result") in {"ERROR"}:
-        return "generate_patch"
-    return "evaluate_patch"
+    return (
+        "generate_patch"
+        if state.get("validation_result") == "ERROR"
+        else "evaluate_patch"
+    )
 
 
 # EOF

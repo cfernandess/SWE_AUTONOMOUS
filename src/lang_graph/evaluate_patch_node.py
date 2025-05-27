@@ -9,15 +9,25 @@ def make_evaluate_patch_node(problem, environment, config_agent):
     evaluator = PatchEvaluator(problem, environment, config_agent)
 
     def evaluate_patch(state: PatchState) -> PatchState:
-        result = evaluator.evaluate(patch=state["lint_diff"])
-        resolved = problem.instance_id in result["evaluation"].get("resolved_ids", [])
-        return {
-            **state,
-            "status": "RESOLVED" if resolved else "UNRESOLVED",
-            "resolved": resolved,
-        }
+        try:
+            result = evaluator.evaluate(patch=state["patch"])
+            resolved = problem.instance_id in result["evaluation"].get(
+                "resolved_ids", []
+            )
+            return {
+                **state,
+                "evaluation_result": "PASSED" if resolved else "ERROR",
+                "evaluation_err_msg": (
+                    "" if resolved else "Patch did not resolve the issue"
+                ),
+            }
+        except Exception as e:
+            return {
+                **state,
+                "evaluation_result": "ERROR",
+                "evaluation_err_msg": f"Evaluation failed: {str(e)}",
+            }
 
-    # NOTE: Expected type 'RunnableConfig | None', got 'dict[str, str]' instead
     return RunnableLambda(evaluate_patch).with_config({"run_name": "evaluate_patch"})
 
 

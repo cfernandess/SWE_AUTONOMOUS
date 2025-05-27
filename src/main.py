@@ -15,6 +15,7 @@ from src.config.config_model import ConfigModel
 from src.lang_graph.graph_runner import build_patch_graph
 from src.models.environment import Environment
 from src.models.problem import Problem
+from src.tools.patch_validator_tool import PatchValidatorTool
 from src.utils.io_utils import project_root
 from src.utils.swe_bench_util import load_swe_bench_difficulty
 from src.workflow.patch_evaluator import PatchEvaluator
@@ -58,9 +59,19 @@ def run(problem: Problem, environment: Environment, config_agent: ConfigAgent):
         )
         patch = generator.generate_patch()
         evaluator.evaluate(patch)
+        print(patch)
     except Exception as e:
         logging.getLogger("rich").exception(f"[Agent] ❌ Unhandled error: {e}")
         raise
+
+
+def validate_patch_on_problem(
+    problem: Problem, environment: Environment, config_agent: ConfigAgent
+):
+    patch = problem.patch
+    tool = PatchValidatorTool(problem, environment, config_agent)
+    result = tool.forward(patch)
+    print(result)
 
 
 if __name__ == "__main__":
@@ -76,7 +87,7 @@ if __name__ == "__main__":
     if args.local:
         load_dotenv(os.path.join(root_path, ".env"))
     problems = load_swe_bench_difficulty()
-    problems = problems[3:4]
+    problems = [problems[10]]
     for problem in problems:
         environment = Environment(
             problem=problem,
@@ -87,6 +98,7 @@ if __name__ == "__main__":
         config_model_openai = ConfigModel(model_name="gpt-4o", vendor_name="openai")
         # config_model_anthropic = ConfigModel(model_name="claude-3-7-sonnet-20250219", vendor_name="anthropic")
         config_agent = ConfigAgent(config_model=config_model_openai)
+        # run_graph(problem=problem, environment=environment, config_agent=config_agent)
         run_graph(problem=problem, environment=environment, config_agent=config_agent)
 
 # EOF
