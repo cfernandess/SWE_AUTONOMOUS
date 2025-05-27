@@ -51,7 +51,7 @@ def build_patch_graph(
     return graph.compile()
 
 
-if __name__ == "__main__":
+def run_graph():
     p = argparse.ArgumentParser()
     p.add_argument("--local", action="store_true")
     args = p.parse_args()
@@ -80,5 +80,6 @@ if __name__ == "__main__":
     with tracing_v2_enabled(project_name="SWE"):
         result = graph.invoke(input=initial_state)
         print(result)
+
 
 # EOF

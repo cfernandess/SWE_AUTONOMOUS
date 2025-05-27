@@ -26,11 +26,11 @@ class ConfigAgent(YamlObject):
         description="General configuration models including LLM and system settings.",
     )
     load_cache: bool = Field(
-        True, description="Load results from cache instead of recomputing."
+        False, description="Load results from cache instead of recomputing."
     )
     save_cache: bool = Field(True, description="Save results to cache after computing.")
     agent_max_steps: conint(gt=0, le=10) = Field(
-        7,
+        20,
         description="Number of agent max retries. Must be >0.",
     )
     mock_mode: Optional[bool] = Field(

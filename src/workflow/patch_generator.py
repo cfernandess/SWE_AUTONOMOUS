@@ -37,7 +37,7 @@ class PatchGenerator:
         )
 
     def generate(self, path: Path, generator, desc: str):
-        if path.exists():
+        if path.exists() and self.config_agent.load_cache:
             self.logger.info(f"[Cache] ✅ Loaded cached {desc} from {path.name}")
             return json.loads(path.read_text())
 
@@ -70,7 +70,7 @@ class PatchGenerator:
 
             return patch_str
 
-        if patch_path.exists():
+        if patch_path.exists() and self.config_agent.load_cache:
             self.logger.info(f"[Cache] ✅ Loaded cached patch from {patch_path.name}")
             return patch_path.read_text()
 

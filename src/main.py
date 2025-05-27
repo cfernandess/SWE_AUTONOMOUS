@@ -4,7 +4,6 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import List
 
 from dotenv import load_dotenv
 from rich.logging import RichHandler
@@ -16,6 +15,7 @@ from src.utils.io_utils import project_root
 from src.utils.swe_bench_util import load_swe_bench_difficulty
 from src.workflow.patch_evaluator import PatchEvaluator
 from src.workflow.patch_generator import PatchGenerator
+from src.lang_graph.graph_runner import run_graph
 
 logging.basicConfig(
     level=logging.INFO, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
@@ -42,18 +42,7 @@ def run_validation(
     evaluator.evaluate(problem.patch)
 
 
-def main(problems: List[Problem], root_output: Path, root_path: Path):
-    for problem in problems:
-        environment = Environment(
-            problem=problem,
-            root_output=root_output,
-            root_path=root_path,
-        )
-        config_agent = ConfigAgent()
-        run(problem=problem, environment=environment, config_agent=config_agent)
-
-
-if __name__ == "__main__":
+def run_main():
     try:
         p = argparse.ArgumentParser()
         p.add_argument("--local", action="store_true")
@@ -68,9 +57,20 @@ if __name__ == "__main__":
             load_dotenv(os.path.join(root_path, ".env"))
         problems = load_swe_bench_difficulty()
         problems = problems[6:7]
-        main(problems=problems, root_output=root_output, root_path=root_path)
+        for problem in problems:
+            environment = Environment(
+                problem=problem,
+                root_output=root_output,
+                root_path=root_path,
+            )
+            config_agent = ConfigAgent()
+            run(problem=problem, environment=environment, config_agent=config_agent)
     except Exception as e:
         logging.getLogger("rich").exception(f"[Agent] ❌ Unhandled error: {e}")
         raise
+
+
+if __name__ == "__main__":
+    run_graph()
 
 # EOF
