@@ -1,23 +1,15 @@
 # graph_runner.py
-import argparse
-import os
-import tempfile
-from pathlib import Path
 
-from dotenv import load_dotenv
-from langchain_core.tracers.context import tracing_v2_enabled
 from langgraph.graph import StateGraph, START, END
 
 from src.config.config_agent import ConfigAgent
 from src.lang_graph.evaluate_patch_node import make_evaluate_patch_node
 from src.lang_graph.generate_patch_node import make_generate_patch_node
-from src.lang_graph.graph_nodes import route_from_validation
 from src.lang_graph.patch_state import PatchState
 from src.lang_graph.validate_patch_node import make_validate_patch_node
+from src.lang_graph.validate_patch_node import route_from_validation
 from src.models.environment import Environment
 from src.models.problem import Problem
-from src.utils.io_utils import project_root
-from src.utils.swe_bench_util import load_swe_bench_difficulty
 from src.workflow.patch_generator import PatchGenerator
 
 
@@ -51,37 +43,6 @@ def build_patch_graph(
     graph.add_edge("evaluate_patch", END)
 
     return graph.compile()
-
-
-def run_graph():
-    p = argparse.ArgumentParser()
-    p.add_argument("--local", action="store_true")
-    args = p.parse_args()
-    if args.local:
-        root_output = Path("/Users/coby/TEMP")
-    else:
-        root_output = Path(tempfile.mkdtemp(prefix="swe_"))
-
-    root_path = project_root() if args.local else Path("/app")
-    root_output.mkdir(parents=True, exist_ok=True)
-    if args.local:
-        load_dotenv(os.path.join(root_path, ".env"))
-
-    problems = load_swe_bench_difficulty()
-    problem = problems[30]
-    environment = Environment(
-        problem=problem, root_output=root_output, root_path=root_path
-    )
-    config_agent = ConfigAgent()
-    graph = build_patch_graph(
-        problem=problem, environment=environment, config_agent=config_agent
-    )
-
-    initial_state = {"attempts": 0}
-
-    with tracing_v2_enabled(project_name="SWE"):
-        result = graph.invoke(input=initial_state)
-        print(result)
 
 
 # EOF

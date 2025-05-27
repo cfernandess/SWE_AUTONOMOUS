@@ -47,4 +47,10 @@ def make_validate_patch_node(problem, environment, config_agent, max_retries: in
     return RunnableLambda(validate_patch).with_config({"run_name": "validate_patch"})
 
 
+def route_from_validation(state: PatchState) -> str:
+    if state.get("lint_result") in {"ERROR"}:
+        return "generate_patch"
+    return "evaluate_patch"
+
+
 # EOF

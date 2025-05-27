@@ -68,9 +68,8 @@ class RuffLintTool(Tool):
                 result = "ERROR: Invalid input format. Each item must contain 'path' and 'diff'."
                 break
 
-            result_obj = self._process_single_solution(solution)
-            if result_obj["level"] == "Error":
-                result = result_obj["reason"]
+            result = self._process_single_solution(solution)
+            if result != "PASSED":
                 break
         else:
             result = "PASSED"
@@ -92,7 +91,7 @@ class RuffLintTool(Tool):
 
         return result
 
-    def _process_single_solution(self, solution: dict) -> dict:
+    def _process_single_solution(self, solution: dict) -> str:
         path_str = solution["path"]
         diff = self.fix_hunk_headers(solution["diff"])
         file_path = self.repo_path / path_str
@@ -102,11 +101,10 @@ class RuffLintTool(Tool):
             original_text = "" if is_new_file else file_path.read_text()
             patched_text = apply_patch_to_file(original_text, diff, Path(path_str).name)
         except Exception as e:
-            return {
-                "path": path_str,
-                "reason": f"ERROR: Patch failed ({type(e).__name__}): {e}",
-                "level": "Error",
-            }
+            return (
+                f"Patch failed for path: {path_str}\n\n"
+                f"Error: {type(e).__name__}: {e}"
+            )
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp:
             tmp.write(patched_text)
@@ -121,14 +119,13 @@ class RuffLintTool(Tool):
         tmp_path.unlink(missing_ok=True)
 
         if check.returncode == 0:
-            return {"path": path_str, "reason": "PASSED", "level": "High"}
+            return "PASSED"
         else:
             error_output = check.stderr.strip() or check.stdout.strip()
-            return {
-                "path": path_str,
-                "reason": f"ERROR: {error_output}",
-                "level": "Error",
-            }
+            return (
+                f"Lint failed for patch on path: {path_str}\n\n"
+                f"Ruff output:\n{error_output}"
+            )
 
     @staticmethod
     def fix_hunk_headers(diff: str) -> str:

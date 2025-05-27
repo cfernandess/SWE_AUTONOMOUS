@@ -37,14 +37,25 @@ class ConfigAgent(YamlObject):
         False,
         description="If True, disables actual LLM calls and returns mocked responses (for testing).",
     )
-    patch_prompt_path: Path = Field(
-        Path("src/agent/agent_patch_claude.prompt"),
-        description="Relative path to the main action prompt file.",
-    )
     num_patches: conint(gt=0, le=5) = Field(
         1,
         description="Number of agent max retries. Must be >0.",
     )
+    patch_prompt_path: Optional[Path] = None  # allow override
+
+    def __init__(self, **data):
+        super().__init__(**data)
+
+        if self.patch_prompt_path is None:
+            prompt_paths = {
+                "openai": Path("src/agent/agent_patch_openai.prompt"),
+                "anthropic": Path("src/agent/agent_patch_anthropic.prompt"),
+                "cohere": Path("src/agent/agent_patch_cohere.prompt"),
+            }
+            vendor = self.config_model.vendor_name
+            self.patch_prompt_path = prompt_paths.get(
+                vendor, Path("src/agent/agent_patch_default.prompt")
+            )
 
     @staticmethod
     def get_llm_wrapper(config_model):
