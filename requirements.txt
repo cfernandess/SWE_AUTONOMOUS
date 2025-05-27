@@ -10,9 +10,12 @@ python-dotenv
 langchain
 langchain-community
 langchain-huggingface
+langgraph
+langsmith
 smolagents
 unidiff
 ruff
 rich
 tiktoken
 pytest-json-report
+langfuse

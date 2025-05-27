@@ -1,5 +1,6 @@
 # edit_tool.py
 import os
+from pathlib import Path
 from time import perf_counter
 
 from smolagents.tools import Tool
@@ -7,6 +8,11 @@ from smolagents.tools import Tool
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.models.problem import Problem
+
+
+def resolve_path(repo_path: Path, input_path: str) -> Path:
+    path = Path(input_path)
+    return (repo_path / path).resolve() if not path.is_absolute() else path
 
 
 class EditorTool(Tool):
@@ -24,7 +30,10 @@ class EditorTool(Tool):
             "enum": ["view", "create", "str_replace", "insert", "undo_edit"],
             "description": "Command to run",
         },
-        "path": {"type": "string", "description": "Absolute path to file or directory"},
+        "path": {
+            "type": "string",
+            "description": "Absolute or relative path to file or directory",
+        },
         "file_text": {
             "type": "string",
             "description": "File contents for create command",
@@ -78,18 +87,21 @@ class EditorTool(Tool):
         view_range: list[int] = None,
     ) -> str:
         start = perf_counter()
+        resolved_path = None
 
         try:
-            if not os.path.isabs(path):
-                result = f"Error: Path must be absolute: {path}"
-            elif ".." in os.path.relpath(path, start="/"):
-                result = f"Error: Path traversal not allowed: {path}"
+            resolved_path = resolve_path(self.environment.repo_path, path)
 
-            elif command == "view":
-                if os.path.isdir(path):
+            if not str(resolved_path).startswith(str(self.environment.repo_path)):
+                return (
+                    f"Error: Access outside repository is not allowed: {resolved_path}"
+                )
+
+            if command == "view":
+                if resolved_path.is_dir():
                     files = []
-                    for root, _, filenames in os.walk(path, topdown=True):
-                        level = root.replace(path, "").count(os.sep)
+                    for root, _, filenames in os.walk(resolved_path, topdown=True):
+                        level = root.replace(str(resolved_path), "").count(os.sep)
                         if level <= 2:
                             indent = " " * 4 * level
                             files.append(f"{indent}{os.path.basename(root)}/")
@@ -98,8 +110,8 @@ class EditorTool(Tool):
                                 if not f.startswith("."):
                                     files.append(f"{subindent}{f}")
                     result = "\n".join(files)
-                elif os.path.isfile(path):
-                    with open(path, "r") as f:
+                elif resolved_path.is_file():
+                    with resolved_path.open("r") as f:
                         content = f.readlines()
                     if view_range:
                         start_line = max(0, view_range[0] - 1)
@@ -111,54 +123,56 @@ class EditorTool(Tool):
                         [f"{i + 1:4d} {line}" for i, line in enumerate(content)]
                     )
                 else:
-                    result = f"Error: {path} is not a file or directory."
+                    result = f"Error: {resolved_path} is not a file or directory."
 
             elif command == "create":
-                if os.path.exists(path):
-                    result = f"Error: {path} already exists."
+                if resolved_path.exists():
+                    result = f"Error: {resolved_path} already exists."
                 else:
-                    os.makedirs(os.path.dirname(path), exist_ok=True)
-                    with open(path, "w") as f:
+                    os.makedirs(resolved_path.parent, exist_ok=True)
+                    with resolved_path.open("w") as f:
                         f.write(file_text)
-                    result = f"File created: {path}"
+                    result = f"File created: {resolved_path}"
 
             elif command == "str_replace":
-                if not os.path.isfile(path):
-                    result = f"Error: File does not exist: {path}"
+                if not resolved_path.is_file():
+                    result = f"Error: File does not exist: {resolved_path}"
                 else:
-                    with open(path, "r") as f:
+                    with resolved_path.open("r") as f:
                         content = f.read()
                     occurrences = content.count(old_str)
                     if occurrences == 0:
-                        result = f"Error: old_str not found in {path}"
+                        result = f"Error: old_str not found in {resolved_path}"
                     elif occurrences > 1:
                         result = f"Error: old_str appears {occurrences} times, must be unique"
                     else:
-                        with open(path, "w") as f:
+                        with resolved_path.open("w") as f:
                             f.write(content.replace(old_str, new_str))
-                        result = f"Successfully replaced content in {path}"
+                        result = f"Successfully replaced content in {resolved_path}"
 
             elif command == "insert":
-                if not os.path.isfile(path):
-                    result = f"Error: File does not exist: {path}"
+                if not resolved_path.is_file():
+                    result = f"Error: File does not exist: {resolved_path}"
                 else:
                     try:
                         insert_line = int(insert_line)
                     except ValueError:
                         result = "Error: insert_line must be an integer"
                     else:
-                        with open(path, "r") as f:
+                        with resolved_path.open("r") as f:
                             content = f.readlines()
                         if insert_line < 0 or insert_line > len(content):
                             result = f"Error: insert_line {insert_line} out of range"
                         else:
                             content.insert(insert_line, new_str.rstrip("\n") + "\n")
-                            with open(path, "w") as f:
+                            with resolved_path.open("w") as f:
                                 f.writelines(content)
-                            result = f"Inserted text at line {insert_line} in {path}"
+                            result = f"Inserted text at line {insert_line} in {resolved_path}"
 
             elif command == "undo_edit":
-                result = f"Error: Undo functionality not implemented for {path}"
+                result = (
+                    f"Error: Undo functionality not implemented for {resolved_path}"
+                )
 
             else:
                 result = f"Error: Unknown command '{command}'"
@@ -175,7 +189,7 @@ class EditorTool(Tool):
                 query=[{"role": "user", "content": command}],
                 state={
                     "repo_path": str(self.environment.repo_path),
-                    "target_path": str(path),
+                    "target_path": str(resolved_path) if resolved_path else "unknown",
                     "command": command,
                     "duration_seconds": perf_counter() - start,
                 },

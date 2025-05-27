@@ -2,9 +2,7 @@
 import shlex
 import subprocess  # nosec B603
 from time import perf_counter
-
 from smolagents.tools import Tool
-
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.models.problem import Problem
@@ -13,16 +11,16 @@ from src.models.problem import Problem
 class BashTool(Tool):
     name = "bash"
     description = """Run commands in a bash shell.\n
-* State is persistent across command calls and discussions with the user.\n
-* You can use sed to inspect file ranges, e.g., 'sed -n 10,25p /path/file.py'.\n
-* Long outputs may be truncated.\n
-* You can use `ruff` directly to lint or fix Python files — e.g., `ruff check file.py` or `ruff check --fix file.py`.\n
-* This is the preferred way to perform linting and auto-fixing of code.\n
+* Commands are executed from the repository root.\n
+* Use `grep`, `sed`, `find`, or `ruff` to inspect and lint files.\n
+* You can view file content ranges using: `sed -n 10,25p file.py`.\n
+* Output may be truncated. Avoid commands that span multiple files.\n
 """
+
     inputs = {
         "command": {
             "type": "string",
-            "description": "The bash command to run (single line, no pipes or redirects).",
+            "description": "The bash command to run (no pipes, no redirects).",
         }
     }
     output_type = "string"
@@ -36,24 +34,41 @@ class BashTool(Tool):
         super().__init__()
         self.problem = problem
         self.environment = environment
+        self.config_agent = config_agent
         self.logger = environment.logger
         self.traj_logger = environment.traj_logger
-        self.config_agent = config_agent
 
     def forward(self, command: str) -> str:
         start = perf_counter()
         stdout = ""
         stderr = ""
         error = ""
-        result = None  # ✅ Safely initialize result
+        result = None
+        working_dir = self.environment.repo_path
 
         try:
             command_list = shlex.split(command)
+            # Debug: print command and working directory
+            print(f"[BashTool] Running: {' '.join(command_list)}")
+            print(f"[BashTool] CWD: {working_dir}")
+
             result = subprocess.run(
-                command_list, capture_output=True, text=True, timeout=30
-            )  # nosec B603
-            stdout = result.stdout
-            stderr = result.stderr
+                command_list,
+                capture_output=True,
+                timeout=30,  # nosec B603
+                cwd=str(working_dir),
+            )
+
+            try:
+                stdout = result.stdout.decode("utf-8")
+            except UnicodeDecodeError:
+                stdout = result.stdout.decode("utf-8", errors="ignore")
+
+            try:
+                stderr = result.stderr.decode("utf-8")
+            except UnicodeDecodeError:
+                stderr = result.stderr.decode("utf-8", errors="ignore")
+
         except subprocess.TimeoutExpired:
             error = "Command timed out after 30 seconds"
         except Exception as e:
@@ -64,13 +79,13 @@ class BashTool(Tool):
         if self.traj_logger:
             self.traj_logger.log_step(
                 response="",
-                thought="Run shell command in isolated environment.",
+                thought="Run shell command in project root.",
                 action=f"bash: {command}",
                 observation=output,
                 query=[{"role": "user", "content": command}],
                 state={
                     "repo_path": str(self.environment.repo_path),
-                    "working_dir": str(self.environment.repo_path),
+                    "working_dir": str(working_dir),
                     "exit_code": result.returncode if result else -1,
                     "duration_seconds": perf_counter() - start,
                 },

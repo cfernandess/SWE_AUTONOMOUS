@@ -67,7 +67,7 @@ if __name__ == "__main__":
         if args.local:
             load_dotenv(os.path.join(root_path, ".env"))
         problems = load_swe_bench_difficulty()
-        problems = problems[2:4]
+        problems = problems[6:7]
         main(problems=problems, root_output=root_output, root_path=root_path)
     except Exception as e:
         logging.getLogger("rich").exception(f"[Agent] ❌ Unhandled error: {e}")
