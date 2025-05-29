@@ -26,11 +26,11 @@ class ConfigAgent(YamlObject):
         description="General configuration models including LLM and system settings.",
     )
     load_cache: bool = Field(
-        True, description="Load results from cache instead of recomputing."
+        False, description="Load results from cache instead of recomputing."
     )
     save_cache: bool = Field(True, description="Save results to cache after computing.")
     agent_max_steps: conint(gt=0, le=10) = Field(
-        20,
+        30,
         description="Number of agent max retries. Must be >0.",
     )
     mock_mode: Optional[bool] = Field(
@@ -47,7 +47,18 @@ class ConfigAgent(YamlObject):
         description="Maximum number of retries",
     )
     max_tool_output_chars: conint(gt=0, le=10_000) = Field(
-        5000, description="Maximum tool output chars"
+        10_000, description="Maximum tool output chars"
+    )
+    evaluation_detailed: bool = Field(
+        True, description="Evaluation type regular or detailed."
+    )
+    patch_prompt_path_first_attempt: str = Field(
+        default="src/prompts/patch_first_attempt.prompt",
+        description="Prompt template path for the initial patch generation attempt.",
+    )
+    patch_prompt_path_retry: str = Field(
+        default="src/prompts/patch_retry.prompt",
+        description="Prompt template path for retry attempts.",
     )
 
     def __init__(self, **data):
@@ -55,12 +66,12 @@ class ConfigAgent(YamlObject):
 
         if self.patch_prompt_path is None:
             prompt_paths = {
-                "openai": Path("src/prompts/agent_patch_openai.prompt"),
-                "anthropic": Path("src/prompts/agent_patch_anthropic.prompt"),
+                "openai": Path("src/prompts/patch_openai.prompt"),
+                "anthropic": Path("src/prompts/patch_anthropic.prompt"),
             }
             vendor = self.config_model.vendor_name
             self.patch_prompt_path = prompt_paths.get(
-                vendor, Path("src/prompts/agent_patch_openai.prompt")
+                vendor, Path("src/prompts/patch_openai.prompt")
             )
 
     @staticmethod

@@ -1,14 +1,13 @@
-# evaluate_patch_node.py
+# evaluate_patch_node_detailed.py
 from langchain_core.runnables import RunnableLambda
-from langgraph.graph import END
 
 from src.lang_graph.patch_state import PatchState
 from src.models.enums import RESULT, GRAPH_STATE
-from src.workflow.patch_evaluator import PatchEvaluator
+from src.workflow.patch_evaluator_detailed import PatchEvaluatorDetailed
 
 
-def make_evaluate_patch_node(problem, environment, config_agent):
-    evaluator = PatchEvaluator(problem, environment, config_agent)
+def make_evaluate_detailed_patch_node(problem, environment, config_agent):
+    evaluator = PatchEvaluatorDetailed(problem, environment, config_agent)
     max_retries = config_agent.max_retries
 
     def evaluate_patch(state: PatchState) -> PatchState:
@@ -25,18 +24,20 @@ def make_evaluate_patch_node(problem, environment, config_agent):
 
         try:
             result = evaluator.evaluate(patch=state["patch"])
-            evaluation = result.get("evaluation", {})
-            log_output = result.get("evaluation_log", "")
-            log_summary = extract_patch_failure_summary(log_output)
-
-            is_resolved = problem.instance_id in evaluation.get("resolved_ids", [])
+            eval_data = result.get("evaluation", {})
+            status = eval_data.get("status", "UNKNOWN")
+            log_output = eval_data.get("log", "")
+            report = eval_data.get("report", {})
 
             return {
                 **state,
-                "evaluation_result": RESULT.PASSED if is_resolved else RESULT.ERROR,
-                "evaluation_err_msg": log_summary if not is_resolved else "",
+                "evaluation_result": (
+                    RESULT.PASSED if status == "RESOLVED" else RESULT.ERROR
+                ),
+                "evaluation_err_msg": extract_patch_failure_summary(log_output),
                 "evaluation_attempts": attempts,
                 "evaluation_log": log_output,
+                "evaluation_report": report,
                 "graph_state": GRAPH_STATE.EVALUATE_PATCH,
             }
 
@@ -50,7 +51,7 @@ def make_evaluate_patch_node(problem, environment, config_agent):
             }
 
     return RunnableLambda(evaluate_patch).with_config(
-        {"run_name": GRAPH_STATE.EVALUATE_PATCH}
+        {"run_name": f"{GRAPH_STATE.EVALUATE_PATCH}_detailed"}
     )
 
 
@@ -59,16 +60,6 @@ def extract_patch_failure_summary(log: str, max_lines: int = 10) -> str:
     failures = [line for line in lines if "FAILED" in line or "rejects" in line]
     summary = failures[:max_lines] if failures else lines[:max_lines]
     return "\n".join(summary) or "(No evaluation logs available.)"
-
-
-def route_from_evaluation(state: PatchState) -> str:
-    if state.get("evaluation_result") == RESULT.ERROR:
-        return (
-            GRAPH_STATE.GENERATE_PATCH
-            if state.get("evaluation_attempts", 0) < 3
-            else END
-        )
-    return END
 
 
 # EOF

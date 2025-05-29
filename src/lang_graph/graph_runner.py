@@ -1,8 +1,10 @@
 # graph_runner.py
-
 from langgraph.graph import StateGraph, START, END
 
 from src.config.config_agent import ConfigAgent
+from src.lang_graph.evaluate_detailed_patch_node import (
+    make_evaluate_detailed_patch_node,
+)
 from src.lang_graph.evaluate_patch_node import (
     make_evaluate_patch_node,
     route_from_evaluation,
@@ -32,11 +34,18 @@ def build_patch_graph(
         GRAPH_STATE.VALIDATE_PATCH,
         make_validate_patch_node(problem, environment, config_agent),
     )
-    graph.add_node(
-        GRAPH_STATE.EVALUATE_PATCH,
-        make_evaluate_patch_node(problem, environment, config_agent),
-    )
 
+    # Choose evaluation node based on config
+    if config_agent.evaluation_detailed:
+        eval_node = make_evaluate_detailed_patch_node(
+            problem, environment, config_agent
+        )
+    else:
+        eval_node = make_evaluate_patch_node(problem, environment, config_agent)
+
+    graph.add_node(GRAPH_STATE.EVALUATE_PATCH, eval_node)
+
+    # Edges
     graph.add_edge(START, GRAPH_STATE.GENERATE_PATCH)
     graph.add_edge(GRAPH_STATE.GENERATE_PATCH, GRAPH_STATE.VALIDATE_PATCH)
 

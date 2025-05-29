@@ -32,7 +32,7 @@ def run_graph(problem: Problem, environment: Environment):
         # config_model_anthropic = ConfigModel(model_name="claude-3-7-sonnet-20250219", vendor_name="anthropic")
         config_agent = ConfigAgent(
             config_model=config_model_openai,
-            patch_prompt_path="src/prompts/agent_patch_lg.prompt",
+            patch_prompt_path="src/prompts/patch_lg.prompt",
         )
         graph = build_patch_graph(
             problem=problem, environment=environment, config_agent=config_agent
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     if args.local:
         load_dotenv(os.path.join(root_path, ".env"))
     problems = load_swe_bench_difficulty()
-    problems = [problems[1]]
+    problems = [problems[10]]
     for problem in problems:
         environment = Environment(
             problem=problem,

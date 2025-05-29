@@ -1,3 +1,4 @@
+import json
 import re
 import shutil
 import subprocess
@@ -16,10 +17,10 @@ class PatchValidatorTool(Tool):
     name = "patch_validator_tool"
     description = (
         "Validate a unified diff patch string using Ruff.\n\n"
-        "Returns a triple-quoted string in one of the following formats:\n\n"
-        "'''\\nPASSED:\\n\\n<cleaned_patch>\\n'''\n"
+        "Returns a JSON string in one of the following formats:\n"
+        '{ "status": "PASSED", "cleaned_patch": "<patch>" }\n'
         "or\n"
-        "'''\\nERROR:\\n\\n<error_message>\\n'''\n"
+        '{ "status": "ERROR", "error_message": "<message>" }'
     )
 
     inputs = {
@@ -53,21 +54,44 @@ class PatchValidatorTool(Tool):
             for chunk in chunks:
                 path = chunk["path"]
                 original_diff = chunk["diff"]
+
                 patched_text, fixed_text = self._apply_patch(path, original_diff)
 
-                # Generate actual diff between patched and fixed content
+                # Log intermediate patch/fix outputs
+                self.logger.debug(
+                    f"[PatchValidatorTool] Patched text for {path}:\n{patched_text}"
+                )
+                self.logger.debug(
+                    f"[PatchValidatorTool] Fixed text for {path}:\n{fixed_text}"
+                )
+
                 unified_diff = self._generate_diff(path, patched_text, fixed_text)
+                self.logger.debug(
+                    f"[PatchValidatorTool] Unified diff for {path}:\n{unified_diff}"
+                )
+
                 fixed_diffs.append(unified_diff)
 
             output = "\n".join(diff for diff in fixed_diffs if diff.strip())
-            return (
-                f"'''\nPASSED:\n\n{output}\n'''"
-                if output.strip()
-                else f"'''\nPASSED:\n\n{input}\n'''"
+            cleaned_patch = output if output.strip() else input
+
+            self.logger.info(f"[PatchValidatorTool] Cleaned patch:\n{cleaned_patch}")
+
+            return json.dumps(
+                {
+                    "status": "PASSED",
+                    "cleaned_patch": cleaned_patch,
+                }
             )
 
         except Exception as e:
-            return f"'''\nERROR:\n\n{type(e).__name__}: {e}\n'''"
+            self.logger.error(f"[PatchValidatorTool] Exception during validation: {e}")
+            return json.dumps(
+                {
+                    "status": "ERROR",
+                    "error_message": f"{type(e).__name__}: {e}",
+                }
+            )
 
     def _extract_chunks(self, patch: str) -> List[dict]:
         parts = re.split(r"^diff --git a/(.+?) b/\1\n", patch, flags=re.MULTILINE)

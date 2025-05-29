@@ -1,4 +1,6 @@
 # validate_patch_node.py
+import json
+
 from langchain_core.runnables import RunnableLambda
 from langgraph.graph import END
 
@@ -24,13 +26,19 @@ def make_validate_patch_node(problem, environment, config_agent):
                 "graph_state": GRAPH_STATE.VALIDATE_PATCH,
             }
 
-        result = tool_runner.forward(patch).strip()
+        try:
+            result = json.loads(tool_runner.forward(patch))
+        except json.JSONDecodeError as e:
+            return {
+                **state,
+                "validation_result": RESULT.ERROR,
+                "validation_err_msg": f"Validator returned invalid JSON: {e}",
+                "validation_attempts": attempts,
+                "graph_state": GRAPH_STATE.VALIDATE_PATCH,
+            }
 
-        # Robust prefix extraction
-        if "PASSED:" in result:
-            cleaned_patch = (
-                result.split("PASSED:")[-1].strip().removesuffix("'''").strip()
-            )
+        if result.get("status") == "PASSED":
+            cleaned_patch = result.get("cleaned_patch", patch)
             return {
                 **state,
                 "patch": cleaned_patch,
@@ -40,21 +48,20 @@ def make_validate_patch_node(problem, environment, config_agent):
                 "graph_state": GRAPH_STATE.VALIDATE_PATCH,
             }
 
-        elif "ERROR:" in result:
-            err_msg = result.split("ERROR:")[-1].strip().removesuffix("'''").strip()
+        if result.get("status") == "ERROR":
             return {
                 **state,
                 "validation_result": RESULT.ERROR,
-                "validation_err_msg": err_msg,
+                "validation_err_msg": result.get("error_message", "Unknown error"),
                 "validation_attempts": attempts,
                 "graph_state": GRAPH_STATE.VALIDATE_PATCH,
             }
 
-        # fallback if neither prefix found
+        # Unexpected output
         return {
             **state,
             "validation_result": RESULT.ERROR,
-            "validation_err_msg": f"Unknown format from validator tool: {result[:200]}...",
+            "validation_err_msg": f"Unexpected validator result: {result}",
             "validation_attempts": attempts,
             "graph_state": GRAPH_STATE.VALIDATE_PATCH,
         }

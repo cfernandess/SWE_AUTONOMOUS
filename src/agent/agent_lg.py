@@ -1,5 +1,4 @@
 # agent_lg.py
-
 from time import perf_counter
 from typing import List, Optional
 
@@ -7,7 +6,7 @@ from smolagents import ToolCallingAgent, Tool
 
 from src.agent.prompt_template import PromptTemplate
 from src.config.config_agent import ConfigAgent
-from src.lang_graph.patch_state import PatchState
+from src.lang_graph.patch_state import PatchState, patch_state_to_prompt_args
 from src.models.environment import Environment
 from src.models.problem import Problem
 from src.models.prompt_arg import PromptArg
@@ -40,26 +39,25 @@ class AgentLG:
         )
 
     def generate_patch(self, state: PatchState) -> str:
+        attempt = state.get("generation_attempts", 0)
+
         args = [
             PromptArg(name="problem_statement", data=self.problem.problem_statement),
             PromptArg(name="repo_path", data=str(self.environment.repo_path)),
-            PromptArg(
-                name="generation_err_msg", data=str(state.get("generation_err_msg", ""))
-            ),
-            PromptArg(
-                name="validation_err_msg", data=str(state.get("validation_err_msg", ""))
-            ),
-            PromptArg(
-                name="evaluation_err_msg", data=str(state.get("evaluation_err_msg", ""))
-            ),
-            PromptArg(name="attempt", data=str(state.get("generation_attempts", 0))),
-        ]
+        ] + patch_state_to_prompt_args(state)
+
+        # Choose correct prompt path based on attempt number
+        prompt_path = (
+            self.config_agent.patch_prompt_path_first_attempt
+            if attempt == 0
+            else self.config_agent.patch_prompt_path_retry
+        )
 
         template = PromptTemplate(
             problem=self.problem,
             environment=self.environment,
             config_agent=self.config_agent,
-            path=self.environment.root_path / self.config_agent.patch_prompt_path,
+            path=self.environment.root_path / prompt_path,
             prompt_args=args,
         )
 
@@ -68,9 +66,9 @@ class AgentLG:
 
         self.traj_logger.log_step(
             response=prompt,
-            thought="Generating retry-aware patch with LLM using PatchState.",
+            thought="Generating patch with structured retry context from PatchState.",
             action="llm(prompt)",
-            observation="Prompt prepared with contextual error messages and attempt count.",
+            observation="Prompt rendered successfully with attempt-specific error context.",
             state=dict(state),
             query=query,
         )
@@ -81,7 +79,7 @@ class AgentLG:
 
         self.traj_logger.log_step(
             response=patch,
-            thought="Patch generated from retry-aware LLM agent.",
+            thought="Patch generated from LLM after retry-aware reasoning.",
             action="ToolCallingAgent.run()",
             observation="Patch returned successfully.",
             state={"duration_seconds": duration},
@@ -90,7 +88,7 @@ class AgentLG:
 
         trajectory_path = (
             self.environment.output_path
-            / f"{self.environment.instance_id}_attempt_{state.get('generation_attempts', 0)}.trajectory.jsonl"
+            / f"{self.environment.instance_id}_attempt_{attempt}.trajectory.jsonl"
         )
         self.traj_logger.save_jsonl(trajectory_path)
         self.logger.info(f"[LGAgent] 🧭 Trajectory saved to {trajectory_path}")

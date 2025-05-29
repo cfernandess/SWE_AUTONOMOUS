@@ -28,12 +28,10 @@ class PatchEvaluator:
         output_path = self.environment.output_path
         swebench_path = self.environment.swebench_path
 
-        # Load patch from cache if not provided
         if patch is None:
             patch_file = output_path / f"{instance_id}.patch"
             patch = patch_file.read_text()
 
-        # Write predictions file
         predictions_path = output_path / f"{instance_id}.predictions.json"
         predictions_path.write_text(
             json.dumps(
@@ -48,12 +46,11 @@ class PatchEvaluator:
             )
         )
 
-        # Run evaluation
         run_id = f"agent-eval-{uuid.uuid4().hex[:8]}"
         self.logger.info(f"[Evaluator] 📊 Running SWE-bench (run_id={run_id})")
 
         try:
-            subprocess.run(
+            completed = subprocess.run(
                 [
                     "python",
                     "-m",
@@ -74,13 +71,24 @@ class PatchEvaluator:
                     "test",
                 ],
                 cwd=swebench_path,
+                capture_output=True,
+                text=True,
                 check=True,
             )
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"[Evaluator] ❌ SWE-bench failed:\n{e}")
-            raise
+            self.logger.info("[Evaluator] ✅ Evaluation subprocess completed.")
+            self.logger.debug(f"🔧 STDOUT:\n{completed.stdout.strip()}")
+            self.logger.debug(f"🛑 STDERR:\n{completed.stderr.strip()}")
 
-        # Read summary report
+        except subprocess.CalledProcessError as e:
+            self.logger.error(
+                f"[Evaluator] ❌ SWE-bench failed with error code {e.returncode}"
+            )
+            self.logger.error(f"🔧 STDOUT:\n{e.stdout.strip()}")
+            self.logger.error(f"🛑 STDERR:\n{e.stderr.strip()}")
+            raise RuntimeError(
+                f"SWE-bench subprocess failed:\n{e.stderr.strip()}"
+            ) from e
+
         report_name = f"{model_name}.{run_id}.json"
         report_path = swebench_path / report_name
         if not report_path.exists():
@@ -88,31 +96,33 @@ class PatchEvaluator:
 
         summary = json.loads(report_path.read_text())
         self.logger.info(f"[Evaluator] 📁 Summary report saved to {report_path}")
-
-        # Print status using summary
-        self._print_summary_diagnostics(summary, patch)
+        self._print_summary_diagnostics(
+            summary, patch, completed.stdout, completed.stderr
+        )
 
         return {"patch": patch, "evaluation": summary}
 
     def normalize_patch(self, patch: str) -> str:
         return patch if patch.endswith("\n") else patch + "\n"
 
-    def _print_summary_diagnostics(self, summary: dict, patch: str):
+    def _print_summary_diagnostics(
+        self, summary: dict, patch: str, stdout: str, stderr: str
+    ):
         instance_id = self.problem.instance_id
 
         if instance_id in summary.get("resolved_ids", []):
+            status = "RESOLVED"
             self.logger.info(
                 f"[Evaluator] ✅ Instance {instance_id} resolved successfully!"
             )
-            status = "RESOLVED"
         elif instance_id in summary.get("unresolved_ids", []):
-            self.logger.warning(f"[Evaluator] ❌ Instance {instance_id} NOT resolved")
             status = "UNRESOLVED"
+            self.logger.warning(f"[Evaluator] ❌ Instance {instance_id} NOT resolved")
         else:
+            status = "UNKNOWN"
             self.logger.warning(
                 f"[Evaluator] ⚠️ No result entry found for: {instance_id}"
             )
-            status = "UNKNOWN"
 
         self.logger.info(f"🔍 Status: {status}")
         self.logger.info(f"📄 Patch:\n{patch.strip() or '[EMPTY PATCH]'}")
@@ -122,6 +132,11 @@ class PatchEvaluator:
             self.logger.info(f"📍 Trajectory log available at: {traj_path}")
         else:
             self.logger.info(f"📍 No trajectory log found for: {instance_id}")
+
+        if status != "RESOLVED":
+            self.logger.info("🔎 Additional diagnostic output:")
+            self.logger.info(f"🧵 STDOUT:\n{stdout.strip()}")
+            self.logger.info(f"🧵 STDERR:\n{stderr.strip()}")
 
 
 # EOF

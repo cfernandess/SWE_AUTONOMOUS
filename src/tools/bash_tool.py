@@ -39,9 +39,7 @@ class BashTool(Tool):
         self.config_agent = config_agent
         self.logger = environment.logger
         self.traj_logger = environment.traj_logger
-        self.MAX_OUTPUT_CHARS = getattr(
-            config_agent.config_tool, "max_output_chars", 10_000
-        )
+        self.MAX_OUTPUT_CHARS = getattr(config_agent, "max_tool_output_chars", 10_000)
 
     def forward(self, command: str) -> str:
         start = perf_counter()
