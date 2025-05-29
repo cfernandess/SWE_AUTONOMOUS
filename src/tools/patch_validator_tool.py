@@ -52,7 +52,7 @@ class PatchValidatorTool(Tool):
 
             for chunk in chunks:
                 path = chunk["path"]
-                original_diff = self.fix_hunk_headers(chunk["diff"])
+                original_diff = chunk["diff"]
                 patched_text, fixed_text = self._apply_patch(path, original_diff)
 
                 # Generate actual diff between patched and fixed content
@@ -113,32 +113,3 @@ class PatchValidatorTool(Tool):
                 tofile=f"b/{path}",
             )
         )
-
-    @staticmethod
-    def fix_hunk_headers(diff: str) -> str:
-        hunk_re = re.compile(r"^@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@")
-        lines = diff.splitlines(keepends=True)
-        fixed_lines, i = [], 0
-        while i < len(lines):
-            line = lines[i]
-            match = hunk_re.match(line)
-            if match:
-                start_i = i
-                orig_start, _, new_start, _ = map(lambda x: int(x or 0), match.groups())
-                i += 1
-                minus_count = plus_count = 0
-                while i < len(lines) and not lines[i].startswith("@@"):
-                    if lines[i].startswith("-") and not lines[i].startswith("---"):
-                        minus_count += 1
-                    elif lines[i].startswith("+") and not lines[i].startswith("+++"):
-                        plus_count += 1
-                    i += 1
-                new_header = (
-                    f"@@ -{orig_start},{minus_count} +{new_start},{plus_count} @@\n"
-                )
-                fixed_lines.append(new_header)
-                fixed_lines.extend(lines[start_i + 1 : i])
-            else:
-                fixed_lines.append(line)
-                i += 1
-        return "".join(fixed_lines)

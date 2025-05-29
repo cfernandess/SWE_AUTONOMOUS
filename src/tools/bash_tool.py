@@ -39,6 +39,9 @@ class BashTool(Tool):
         self.config_agent = config_agent
         self.logger = environment.logger
         self.traj_logger = environment.traj_logger
+        self.MAX_OUTPUT_CHARS = getattr(
+            config_agent.config_tool, "max_output_chars", 10_000
+        )
 
     def forward(self, command: str) -> str:
         start = perf_counter()
@@ -50,14 +53,13 @@ class BashTool(Tool):
 
         try:
             command_list = shlex.split(command)
-            # Debug: print command and working directory
             print(f"[BashTool] Running: {' '.join(command_list)}")
             print(f"[BashTool] CWD: {working_dir}")
 
             result = subprocess.run(
                 command_list,
                 capture_output=True,
-                timeout=30,  # nosec B603
+                timeout=30,
                 cwd=str(working_dir),
             )
 
@@ -78,6 +80,15 @@ class BashTool(Tool):
 
         output = f"STDOUT:\n{stdout}\nSTDERR:\n{stderr}\nERROR:\n{error}"
 
+        was_truncated = False
+        if len(output) > self.MAX_OUTPUT_CHARS:
+            was_truncated = True
+            output = output[: self.MAX_OUTPUT_CHARS].rstrip()
+            output += (
+                "\n\n⚠️ Output truncated due to tool output limits "
+                f"({self.MAX_OUTPUT_CHARS} chars max). Please refine your command.\n"
+            )
+
         if self.traj_logger:
             self.traj_logger.log_step(
                 response="",
@@ -90,6 +101,7 @@ class BashTool(Tool):
                     "working_dir": str(working_dir),
                     "exit_code": result.returncode if result else -1,
                     "duration_seconds": perf_counter() - start,
+                    "truncated": was_truncated,
                 },
             )
 

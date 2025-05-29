@@ -19,6 +19,7 @@ def tool():
     os.makedirs(mock_environment.repo_path, exist_ok=True)
 
     mock_config_agent = MagicMock()
+    mock_config_agent.config_tool.max_output_chars = 10_000
     return BashTool(
         problem=mock_problem,
         environment=mock_environment,

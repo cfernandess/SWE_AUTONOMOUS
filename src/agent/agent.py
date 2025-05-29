@@ -15,7 +15,7 @@ class LLMResponseError(Exception):
     pass
 
 
-class AutonomousAgent:
+class Agent:
     def __init__(
         self,
         problem: Problem,

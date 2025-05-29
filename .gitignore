@@ -174,3 +174,4 @@ cython_debug/
 .pypirc
 /.PROMPT
 .env.docker
+/._prompt

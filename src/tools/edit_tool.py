@@ -112,15 +112,27 @@ class EditorTool(Tool):
                     result = "\n".join(files)
                 elif resolved_path.is_file():
                     with resolved_path.open("r") as f:
-                        content = f.readlines()
+                        full_content = f.readlines()
+
                     if view_range:
                         start_line = max(0, view_range[0] - 1)
                         end_line = (
-                            view_range[1] if view_range[1] != -1 else len(content)
+                            view_range[1] if view_range[1] != -1 else len(full_content)
                         )
-                        content = content[start_line:end_line]
-                    result = "".join(
-                        [f"{i + 1:4d} {line}" for i, line in enumerate(content)]
+                        content = full_content[start_line:end_line]
+                        line_offset = start_line
+                    else:
+                        content = full_content
+                        line_offset = 0
+                        start_line = 0
+                        end_line = len(content)
+
+                    header = f"[Showing lines {start_line + 1} to {end_line} of {len(full_content)}]\n"
+                    result = header + "".join(
+                        [
+                            f"{i + 1 + line_offset:4d} {line}"
+                            for i, line in enumerate(content)
+                        ]
                     )
                 else:
                     result = f"Error: {resolved_path} is not a file or directory."

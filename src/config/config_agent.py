@@ -26,7 +26,7 @@ class ConfigAgent(YamlObject):
         description="General configuration models including LLM and system settings.",
     )
     load_cache: bool = Field(
-        False, description="Load results from cache instead of recomputing."
+        True, description="Load results from cache instead of recomputing."
     )
     save_cache: bool = Field(True, description="Save results to cache after computing.")
     agent_max_steps: conint(gt=0, le=10) = Field(
@@ -42,19 +42,25 @@ class ConfigAgent(YamlObject):
         description="Number of agent max retries. Must be >0.",
     )
     patch_prompt_path: Optional[Path] = None  # allow override
+    max_retries: conint(gt=0, le=10) = Field(
+        7,
+        description="Maximum number of retries",
+    )
+    max_tool_output_chars: conint(gt=0, le=10_000) = Field(
+        5000, description="Maximum tool output chars"
+    )
 
     def __init__(self, **data):
         super().__init__(**data)
 
         if self.patch_prompt_path is None:
             prompt_paths = {
-                "openai": Path("src/agent/agent_patch_openai.prompt"),
-                "anthropic": Path("src/agent/agent_patch_anthropic.prompt"),
-                "cohere": Path("src/agent/agent_patch_cohere.prompt"),
+                "openai": Path("src/prompts/agent_patch_openai.prompt"),
+                "anthropic": Path("src/prompts/agent_patch_anthropic.prompt"),
             }
             vendor = self.config_model.vendor_name
             self.patch_prompt_path = prompt_paths.get(
-                vendor, Path("src/agent/agent_patch_default.prompt")
+                vendor, Path("src/prompts/agent_patch_openai.prompt")
             )
 
     @staticmethod
