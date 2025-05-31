@@ -26,7 +26,7 @@ class ConfigAgent(YamlObject):
         description="General configuration models including LLM and system settings.",
     )
     load_cache: bool = Field(
-        False, description="Load results from cache instead of recomputing."
+        True, description="Load results from cache instead of recomputing."
     )
     save_cache: bool = Field(True, description="Save results to cache after computing.")
     agent_max_steps: conint(gt=0, le=10) = Field(
@@ -41,7 +41,7 @@ class ConfigAgent(YamlObject):
         1,
         description="Number of agent max retries. Must be >0.",
     )
-    patch_prompt_path: Optional[Path] = None  # allow override
+    patch_prompt_path: Optional[Path] = None
     max_retries: conint(gt=0, le=10) = Field(
         7,
         description="Maximum number of retries",
@@ -52,26 +52,40 @@ class ConfigAgent(YamlObject):
     evaluation_detailed: bool = Field(
         True, description="Evaluation type regular or detailed."
     )
-    patch_prompt_path_first_attempt: str = Field(
-        default="src/prompts/patch_first_attempt.prompt",
-        description="Prompt template path for the initial patch generation attempt.",
-    )
-    patch_prompt_path_retry: str = Field(
-        default="src/prompts/patch_retry.prompt",
-        description="Prompt template path for retry attempts.",
-    )
+    evaluation_debug: bool = Field(False, description="Evaluation debug.")
+    patch_prompt_path_first_attempt: Optional[Path] = None
+    patch_prompt_path_retry: Optional[Path] = None
 
     def __init__(self, **data):
         super().__init__(**data)
 
+        vendor = self.config_model.vendor_name
+
         if self.patch_prompt_path is None:
             prompt_paths = {
-                "openai": Path("src/prompts/patch_openai.prompt"),
-                "anthropic": Path("src/prompts/patch_anthropic.prompt"),
+                "openai": Path("src/prompts/openai_patch_first_attempt.prompt"),
+                "anthropic": Path("src/prompts/anthropic_patch_first_attempt.prompt"),
             }
-            vendor = self.config_model.vendor_name
             self.patch_prompt_path = prompt_paths.get(
-                vendor, Path("src/prompts/patch_openai.prompt")
+                vendor, Path("src/prompts/openai_patch_first_attempt.prompt")
+            )
+
+        if self.patch_prompt_path_first_attempt is None:
+            first_attempt_paths = {
+                "openai": Path("src/prompts/openai_patch_first_attempt.prompt"),
+                "anthropic": Path("src/prompts/anthropic_patch_first_attempt.prompt"),
+            }
+            self.patch_prompt_path_first_attempt = first_attempt_paths.get(
+                vendor, Path("src/prompts/openai_patch_first_attempt.prompt")
+            )
+
+        if self.patch_prompt_path_retry is None:
+            retry_paths = {
+                "openai": Path("src/prompts/openai_patch_retry.prompt"),
+                "anthropic": Path("src/prompts/anthropic_patch_retry.prompt"),
+            }
+            self.patch_prompt_path_retry = retry_paths.get(
+                vendor, Path("src/prompts/openai_patch_retry.prompt")
             )
 
     @staticmethod

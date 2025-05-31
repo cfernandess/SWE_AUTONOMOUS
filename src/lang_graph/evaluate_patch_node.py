@@ -62,12 +62,6 @@ def extract_patch_failure_summary(log: str, max_lines: int = 10) -> str:
 
 
 def route_from_evaluation(state: PatchState) -> str:
-    if state.get("evaluation_result") == RESULT.ERROR:
-        return (
-            GRAPH_STATE.GENERATE_PATCH
-            if state.get("evaluation_attempts", 0) < 3
-            else END
-        )
     return END
 
 

@@ -10,9 +10,7 @@ You are an autonomous agent tasked with resolving a software issue in a real-wor
 
 **<problem_statement>**
 ```
-
 $problem_statement
-
 ```
 
 ---
@@ -46,18 +44,13 @@ Generate a **valid unified diff patch** that fixes the issue described above.
 
 Return a **raw unified diff string** in this exact format:
 
-```
-
 diff --git a/path/to/file.py b/path/to/file.py
 --- a/path/to/file.py
 +++ b/path/to/file.py
 @@ def function\_name(...):
-
 * old line
-
 - new line
 
-```
 
 ✅ Must begin with `diff --git`
 ✅ Must include `---` and `+++` lines
@@ -84,6 +77,5 @@ diff --git a/path/to/file.py b/path/to/file.py
 - 🧪 `bash` — execute scripts or test commands
 - 🔗 `sequential_thinker` — reason through the issue step-by-step
 - 🧹 `patch_validator_tool` — check style and formatting
-```
 
 ---

@@ -4,6 +4,7 @@ import logging
 import os
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 from langchain_core.tracers.context import tracing_v2_enabled
@@ -26,14 +27,13 @@ logging.basicConfig(
 )
 
 
-def run_graph(problem: Problem, environment: Environment):
+def run_graph(problem: Problem, environment: Environment) -> dict[str, Any]:
     try:
-        config_model_openai = ConfigModel(model_name="gpt-4o", vendor_name="openai")
-        # config_model_anthropic = ConfigModel(model_name="claude-3-7-sonnet-20250219", vendor_name="anthropic")
-        config_agent = ConfigAgent(
-            config_model=config_model_openai,
-            patch_prompt_path="src/prompts/patch_lg.prompt",
+        # config_model_openai = ConfigModel(model_name="gpt-4o", vendor_name="openai")
+        config_model_anthropic = ConfigModel(
+            model_name="claude-3-7-sonnet-20250219", vendor_name="anthropic"
         )
+        config_agent = ConfigAgent(config_model=config_model_anthropic)
         graph = build_patch_graph(
             problem=problem, environment=environment, config_agent=config_agent
         )
@@ -41,7 +41,8 @@ def run_graph(problem: Problem, environment: Environment):
         initial_state["gold_patch"] = problem.patch
         with tracing_v2_enabled(project_name="SWE"):
             result = graph.invoke(input=initial_state)
-            print(result)
+        return result
+
     except Exception as e:
         logging.getLogger("rich").exception(f"[Agent] ❌ Unhandled error: {e}")
         raise
@@ -88,13 +89,25 @@ if __name__ == "__main__":
     if args.local:
         load_dotenv(os.path.join(root_path, ".env"))
     problems = load_swe_bench_difficulty()
-    problems = [problems[10]]
-    for problem in problems:
+    resolved_count = 0
+    total = 0
+    for problem in problems[0:1]:
         environment = Environment(
             problem=problem,
             root_output=root_output,
             root_path=root_path,
         )
-        run_graph(problem=problem, environment=environment)
+        result = run_graph(problem=problem, environment=environment)
+
+        # Extract result flag
+        is_resolved = result.get("evaluation_report", {}).get("resolved", False)
+        resolved_count += int(is_resolved)
+        total += 1
+        status_icon = "✅" if is_resolved else "❌"
+        print(f"{status_icon} {problem.instance_id} - Resolved: {is_resolved}")
+
+    print("\n🔢 Accuracy Report")
+    print(f"Resolved: {resolved_count}/{total}")
+    print(f"Accuracy: {resolved_count / total:.2%}")
 
 # EOF

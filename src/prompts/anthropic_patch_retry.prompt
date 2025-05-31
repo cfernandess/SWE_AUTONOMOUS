@@ -1,0 +1,32 @@
+<uploaded_files>
+$repo_path
+</uploaded_files>
+I've uploaded a Python code repository in the directory `$repo_path` (not in `/tmp/inputs`). Consider the following
+GitHub issue description:
+
+<problem_statement>
+$problem_statement
+</problem_statement>
+
+Can you help me implement the necessary changes to the repository so that the requirements specified in the `<problem_statement>` are met?
+I've already taken care of all changes to any of the test files described in the `<problem_statement>`.
+This means you DON'T have to modify the testing logic or any of the tests in any way!
+
+You're now working on **attempt number `$generation_attempts`**. Here's a quick summary of what happened before:
+
+* **Previous Generation Result**: `$generation_result`
+* **Generation Error Message**: `$generation_err_msg`
+* **Validation Result**: `$validation_result`
+* **Validation Error Message**: `$validation_err_msg`
+
+Use this context to avoid repeating earlier mistakes and make meaningful progress toward a valid fix.
+
+Your task is to make the minimal changes to non-tests files in the `$repo_path` directory to ensure the `<problem_statement>` is satisfied.
+
+Follow these steps to resolve the issue:
+
+1. As a first step, it might be a good idea to explore the repo to familiarize yourself with its structure.
+2. Create a script to reproduce the error and execute it with `python <filename.py>` using the BashTool, to confirm the error.
+3. Edit the source code of the repo to resolve the issue.
+4. Rerun your reproduce script and confirm that the error is fixed!
+5. Think about edge-cases and make sure your fix handles them as well.

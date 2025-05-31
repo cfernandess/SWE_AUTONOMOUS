@@ -1,4 +1,5 @@
 # patch_evaluator.py
+import difflib
 import json
 import subprocess
 import uuid
@@ -7,6 +8,7 @@ from typing import Optional
 from src.config.config_agent import ConfigAgent
 from src.models.environment import Environment
 from src.models.problem import Problem
+from src.utils.localization_scores import compute_localization_scores
 
 
 class PatchEvaluator:
@@ -23,15 +25,63 @@ class PatchEvaluator:
 
     def evaluate(self, patch: Optional[str] = None) -> dict:
         patch = self.normalize_patch(patch)
+        # Fix #1: Reset repo to base_commit
+        subprocess.run(
+            ["git", "reset", "--hard", self.problem.base_commit],
+            cwd=self.environment.repo_path,
+            check=True,
+        )
+        self.logger.info(
+            f"[Evaluator] 🔁 Reset repo to base_commit: {self.problem.base_commit}"
+        )
+
+        # Fix #2: Verify HEAD == base_commit
+        git_hash = (
+            subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], cwd=self.environment.repo_path
+            )
+            .decode()
+            .strip()
+        )
+        assert (
+            git_hash == self.problem.base_commit
+        ), f"Repo HEAD is at {git_hash}, expected {self.problem.base_commit}"
         instance_id = self.problem.instance_id
         model_name = self.config_agent.config_model.model_name
         output_path = self.environment.output_path
         swebench_path = self.environment.swebench_path
+        repo_path = self.environment.repo_path
 
         if patch is None:
             patch_file = output_path / f"{instance_id}.patch"
             patch = patch_file.read_text()
 
+        # Save patch to file and check if it applies
+        patch_path = output_path / f"{instance_id}.patch"
+        patch_path.write_text(patch)
+
+        apply_check = subprocess.run(
+            ["git", "apply", "--check", str(patch_path)],
+            cwd=repo_path,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        if apply_check.returncode != 0:
+            error_msg = apply_check.stderr.decode()
+            self.logger.error(f"[Evaluator] ❌ Patch failed to apply:\n{error_msg}")
+            self._maybe_log_gold_patch_diff(patch)
+            return {
+                "patch": patch,
+                "evaluation": {
+                    "run_id": "skipped-apply",
+                    "status": "ERROR",
+                    "report": {},
+                    "log": error_msg,
+                },
+            }
+
+        # Write predictions file
         predictions_path = output_path / f"{instance_id}.predictions.json"
         predictions_path.write_text(
             json.dumps(
@@ -99,6 +149,9 @@ class PatchEvaluator:
         self._print_summary_diagnostics(
             summary, patch, completed.stdout, completed.stderr
         )
+        # Compute localization scores
+        localization_scores = compute_localization_scores(patch, self.problem.patch)
+        summary.update(localization_scores)
 
         return {"patch": patch, "evaluation": summary}
 
@@ -137,6 +190,25 @@ class PatchEvaluator:
             self.logger.info("🔎 Additional diagnostic output:")
             self.logger.info(f"🧵 STDOUT:\n{stdout.strip()}")
             self.logger.info(f"🧵 STDERR:\n{stderr.strip()}")
+
+    def _maybe_log_gold_patch_diff(self, generated_patch: str):
+        gold_patch = getattr(self.problem, "standard_patch", None)
+        if not gold_patch:
+            return
+
+        diff = list(
+            difflib.unified_diff(
+                generated_patch.strip().splitlines(),
+                gold_patch.strip().splitlines(),
+                fromfile="generated_patch",
+                tofile="gold_patch",
+                lineterm="",
+            )
+        )
+        if diff:
+            self.logger.warning("📐 Diff between generated and gold patch:")
+            for line in diff:
+                self.logger.warning(line)
 
 
 # EOF

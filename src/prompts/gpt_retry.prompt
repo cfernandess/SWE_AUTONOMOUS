@@ -46,18 +46,14 @@ Generate a **valid unified diff patch** that fixes the issue described above.
 
 Return a **raw unified diff string** in this exact format:
 
-```
-
 diff --git a/path/to/file.py b/path/to/file.py
 --- a/path/to/file.py
 +++ b/path/to/file.py
 @@ def function\_name(...):
-
 * old line
-
 - new line
 
-```
+
 
 ✅ Must begin with `diff --git`
 ✅ Must include `---` and `+++` lines
@@ -104,22 +100,6 @@ Please review the prior failure context carefully before proceeding:
 * **Generation Error Message**: `$generation_err_msg`
 * **Validation Result**: `$validation_result`
 * **Validation Error Message**: `$validation_err_msg`
-* **Evaluation Result**: `$evaluation_result`
-* **Evaluation Error Message**: `$evaluation_err_msg`
-
-If available, you may also consider these insights:
-
-* **Evaluation Log Snippet**:
-
-```
-$evaluation_log[:500]
-```
-
-* **Evaluation Report Summary**:
-
-```json
-$evaluation_report
-```
 
 Use this information to **avoid repeating past mistakes** and make meaningful progress toward a valid patch.
 

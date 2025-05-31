@@ -21,7 +21,10 @@ def make_generate_patch_node(
     )
 
     def generate_patch(state: PatchState) -> PatchState:
-        patch_str = generator.generate_patch(state)
+        if generator.config_agent.evaluation_debug:
+            patch_str = generator.problem.patch
+        else:
+            patch_str = generator.generate_patch(state)
         attempts = state.get("generation_attempts", 0) + 1
 
         return {

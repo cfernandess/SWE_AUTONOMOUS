@@ -8,7 +8,7 @@ from src.models.problem import Problem
 
 def load_swe_bench(
     instance_id: str, path: str = "SWE-bench/SWE-bench_Verified", split: str = "test"
-) -> Problem:
+) -> List[Problem]:
     dataset = load_dataset(path=path, split=split, streaming=False).filter(
         lambda x: x["instance_id"] == instance_id
     )
@@ -16,20 +16,22 @@ def load_swe_bench(
     if not samples:
         raise ValueError(f"Instance ID {instance_id} not found.")
     sample = samples[0]
-    return Problem(
-        instance_id=sample["instance_id"],
-        problem_statement=sample["problem_statement"],
-        repo=sample["repo"],
-        base_commit=sample["base_commit"],
-        hints_text=sample.get("hints_text", "N/A"),
-        created_at=sample.get("created_at", "N/A"),
-        version=sample.get("version", "N/A"),
-        environment_setup_commit=sample.get("environment_setup_commit", "N/A"),
-        patch=sample.get("patch", "N/A"),
-        test_patch=sample.get("test_patch", "N/A"),
-        fail_to_pass=sample.get("FAIL_TO_PASS", "[]"),
-        pass_to_pass=sample.get("PASS_TO_PASS", "[]"),
-    )
+    return [
+        Problem(
+            instance_id=sample["instance_id"],
+            problem_statement=sample["problem_statement"],
+            repo=sample["repo"],
+            base_commit=sample["base_commit"],
+            hints_text=sample.get("hints_text", "N/A"),
+            created_at=sample.get("created_at", "N/A"),
+            version=sample.get("version", "N/A"),
+            environment_setup_commit=sample.get("environment_setup_commit", "N/A"),
+            patch=sample.get("patch", "N/A"),
+            test_patch=sample.get("test_patch", "N/A"),
+            fail_to_pass=sample.get("FAIL_TO_PASS", "[]"),
+            pass_to_pass=sample.get("PASS_TO_PASS", "[]"),
+        )
+    ]
 
 
 def load_swe_bench_difficulty(
